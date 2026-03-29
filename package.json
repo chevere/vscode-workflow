@@ -1,7 +1,7 @@
 {
   "name": "vscode-workflow",
   "publisher": "chevere",
-  "displayName": "Chevere Workflow",
+  "displayName": "chevere/workflow",
   "description": "Chevere Workflow language server support",
   "version": "1.0.0",
   "icon": "chevere.png",
