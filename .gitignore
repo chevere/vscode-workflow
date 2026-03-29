@@ -1,0 +1,13 @@
+.DS_Store
+node_modules
+dist
+build
+out
+*.tsbuildinfo
+server/test/*.js
+server/test/*.js.map
+server/test/*.d.ts
+client/test/*.js
+client/test/*.js.map
+client/test/*.d.ts
+client/.vscode-test/*
