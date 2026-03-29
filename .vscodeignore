@@ -1,0 +1,40 @@
+# TypeScript source files
+client/src/**
+server/src/**
+
+# Test files
+client/test/**
+server/test/**
+
+# Source maps and type declarations (not needed at runtime)
+**/*.js.map
+**/*.d.ts
+
+# TypeScript build cache
+**/*.tsbuildinfo
+
+# TypeScript config files
+tsconfig.json
+client/tsconfig.json
+client/tsconfig.test.json
+server/tsconfig.json
+server/tsconfig.test.json
+
+# Development and CI tooling
+.vscode/**
+.github/**
+.claude/**
+
+# Documentation
+docs/**
+CLAUDE.md
+
+# Dependencies — not needed at runtime (code is bundled)
+node_modules/**
+
+# Build script — not needed at runtime
+esbuild.js
+
+# Misc
+.gitignore
+package-lock.json

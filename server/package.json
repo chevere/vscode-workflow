@@ -1,0 +1,32 @@
+{
+  "name": "chevere-workflow-lsp-server",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "compile": "tsc -p ./tsconfig.json",
+    "watch": "tsc -p ./tsconfig.json -w",
+    "test": "ts-mocha --project tsconfig.test.json 'test/**/*.test.ts'",
+    "test:coverage": "c8 ts-mocha --project tsconfig.test.json 'test/**/*.test.ts'",
+    "test:watch": "ts-mocha --project tsconfig.test.json --watch --watch-files 'src/**/*.ts,test/**/*.ts' 'test/**/*.test.ts'"
+  },
+  "c8": {
+    "include": ["src/**/*.ts"],
+    "exclude": ["src/**/*Script.ts"],
+    "reporter": ["text", "lcov"]
+  },
+  "dependencies": {
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.11",
+    "php-parser": "^3.1.5"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.0",
+    "@types/node": "^20.0.0",
+    "@types/sinon": "^17.0.0",
+    "mocha": "^10.0.0",
+    "sinon": "^17.0.0",
+    "c8": "^10.0.0",
+    "ts-mocha": "^10.0.0",
+    "typescript": "^5.3.0"
+  }
+}

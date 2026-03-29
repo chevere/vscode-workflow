@@ -1,0 +1,51 @@
+name: Tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests with coverage
+        run: npm run test:coverage --workspace=server
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: server/coverage/lcov.info
+
+  test-client:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Compile
+        run: npm run compile
+
+      - name: Run extension tests
+        run: xvfb-run -a npm run test --workspace=client

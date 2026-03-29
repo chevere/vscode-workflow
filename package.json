@@ -1,0 +1,113 @@
+{
+  "name": "vscode-workflow",
+  "publisher": "chevere",
+  "displayName": "Chevere Workflow",
+  "description": "Chevere Workflow language server support",
+  "version": "1.0.0",
+  "icon": "chevere.png",
+  "homepage": "https://github.com/chevere/vscode-workflow",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chevere/vscode-workflow"
+  },
+  "bugs": {
+    "url": "https://github.com/chevere/vscode-workflow/issues"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "keywords": [
+    "php",
+    "chevere",
+    "workflow",
+    "language-server"
+  ],
+  "categories": [
+    "Programming Languages",
+    "Other",
+    "Visualization"
+  ],
+  "activationEvents": [
+    "onLanguage:php"
+  ],
+  "main": "./client/out/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "PHP subprocess execution is disabled in untrusted workspaces.",
+      "restrictedConfigurations": [
+        "chevereWorkflow.phpExecutable",
+        "chevereWorkflow.composerJsonPath"
+      ]
+    }
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "chevereWorkflow.showJobGraph",
+        "title": "Chevere Workflow: Show Job Graph"
+      },
+      {
+        "command": "chevereWorkflow.restartServer",
+        "title": "Chevere Workflow: Restart Server"
+      },
+      {
+        "command": "chevereWorkflow.installWorkflow",
+        "title": "Chevere Workflow: Install chevere/workflow"
+      }
+    ],
+    "configuration": {
+      "title": "Chevere Workflow",
+      "properties": {
+        "chevereWorkflow.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the Chevere Workflow language server"
+        },
+        "chevereWorkflow.phpExecutable": {
+          "type": "string",
+          "default": "php",
+          "description": "Path to the PHP executable used for reflection"
+        },
+        "chevereWorkflow.composerJsonPath": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to your project's composer.json (auto-detected if empty)"
+        },
+        "chevereWorkflow.inlayHints.showParameterTypes": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show parameter types as inlay hints"
+        },
+        "chevereWorkflow.inlayHints.showResponseTypes": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show response() chain types as inlay hints"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "node esbuild.js --minify",
+    "compile": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "dependencies": {
+    "@vscode/codicons": "^0.0.45",
+    "mermaid": "^11.13.0",
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^2.22.0",
+    "esbuild": "^0.27.4",
+    "typescript": "^5.3.0"
+  },
+  "workspaces": [
+    "client",
+    "server"
+  ]
+}
