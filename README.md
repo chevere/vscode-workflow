@@ -1,6 +1,8 @@
-# Chevere Workflow
+# Chevere Workflow VS Code Extension
 
 VS Code extension providing complete language server support for [Chevere Workflow](https://chevere.org/packages/workflow) PHP definitions.
+
+[Install from VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=Chevere.vscode-workflow)
 
 ## Features
 
@@ -39,8 +41,11 @@ The **Show Job Graph** command is also available as a CodeLens button that appea
 ## Project Structure
 
 ```plain
-chevere-workflow-lsp/
-├── client/src/extension.ts      # VS Code extension entry point
+vscode-workflow/
+├── client/src/
+│   ├── extension.ts             # VS Code extension entry point
+│   ├── gotoSource.ts            # WebView goto-source message validator
+│   └── openExternal.ts          # WebView open-external URL validator
 └── server/src/
     ├── server.ts                # LSP connection and handlers
     ├── parser.ts                # PHP AST parsing (php-parser)
@@ -56,8 +61,7 @@ chevere-workflow-lsp/
     ├── lintScript.ts            # Embedded PHP linter script
     ├── phpExecutable.ts         # PHP executable sanitization/validation
     ├── tempDir.ts               # Per-process private temp directory
-    ├── jobGraph.ts              # Workflow graph (Mermaid)
-    └── mermaidScript.ts         # Embedded PHP Mermaid generator script
+    └── jobGraph.ts              # Workflow graph (Mermaid)
 ```
 
 The repo is a npm workspace monorepo. The `client` package is the VS Code extension; the `server` package is the language server connected via Node.js IPC.
