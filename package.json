@@ -3,7 +3,7 @@
   "publisher": "chevere",
   "displayName": "chevere/workflow",
   "description": "Chevere Workflow language server support",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "icon": "chevere.png",
   "homepage": "https://github.com/chevere/vscode-workflow",
   "repository": {
