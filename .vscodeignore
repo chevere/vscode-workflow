@@ -28,6 +28,7 @@ server/tsconfig.test.json
 # Documentation
 docs/**
 CLAUDE.md
+AGENTS.md
 
 # Dependencies — not needed at runtime (code is bundled)
 node_modules/**
