@@ -312,6 +312,8 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
     #stages-panel { flex-direction: column; }
     #stages-toolbar { display: none; align-items: center; justify-content: flex-end; gap: 0; padding: 2px 0; background: var(--vscode-editor-background); border-bottom: 1px solid var(--vscode-panel-border, var(--vscode-editorGroup-border, var(--vscode-editorWidget-border))); flex-shrink: 0; height: 28px; }
     #stages-toolbar button { background: transparent; border: none; color: var(--vscode-icon-foreground, var(--vscode-editor-foreground)); border-radius: 0; padding: 0; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    #stages-toolbar button.text-btn { width: auto; padding: 2px 6px; font-size: 11px; font-family: var(--vscode-font-family, sans-serif); color: var(--vscode-descriptionForeground); }
+    #stages-toolbar button.text-btn:hover { color: var(--vscode-editor-foreground); }
     #stages-toolbar button:hover { background: var(--vscode-toolbar-hoverBackground); }
     #stages-toolbar button:active { background: var(--vscode-toolbar-activeBackground); }
     #stages-content { overflow: auto; flex: 1; padding: 24px; }
@@ -367,9 +369,9 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
   <div class="toolbar-sep"></div>
   <button id="btn-export-svg" class="text-btn" title="Export as SVG">SVG</button>
   <button id="btn-export-png" class="text-btn" title="Export as PNG">PNG</button>
+  <span class="toolbar-spacer"></span>
   <div class="toolbar-sep"></div>
   <button id="btn-goto-source" class="text-btn" title="Open source file">${escapeHtml(fileName)}:${sourceLine}</button>
-  <span class="toolbar-spacer"></span>
   <div class="toolbar-sep"></div>
   <button id="btn-copy" title="Copy Mermaid source">
     <i id="icon-copy" class="codicon codicon-copy"></i>
@@ -386,6 +388,8 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
 </div>
 ${stages ? `
 <div id="stages-toolbar">
+  <button id="btn-goto-source-stages" class="text-btn" title="Open source file">${escapeHtml(fileName)}:${sourceLine}</button>
+  <div class="toolbar-sep"></div>
   <button id="btn-copy-stages" title="Copy to clipboard">
     <i id="icon-copy-stages" class="codicon codicon-copy"></i>
     <i id="icon-check-stages" class="codicon codicon-check" style="display:none"></i>
@@ -494,9 +498,15 @@ ${stages ? `
   }
 
   // ── Go to source ─────────────────────────────────────────────────────────
-  document.getElementById('btn-goto-source').addEventListener('click', () => {
+  function gotoSource() {
     if (vscodeApi) vscodeApi.postMessage({ command: 'gotoSource', uri: SOURCE_URI, line: SOURCE_LINE });
-  });
+  }
+
+  const btnGotoSource = document.getElementById('btn-goto-source');
+  if (btnGotoSource) btnGotoSource.addEventListener('click', gotoSource);
+
+  const btnGotoSourceStages = document.getElementById('btn-goto-source-stages');
+  if (btnGotoSourceStages) btnGotoSourceStages.addEventListener('click', gotoSource);
 
   // ── Pan / Zoom ────────────────────────────────────────────────────────────
   const viewport  = document.getElementById('graph-viewport');

@@ -231,6 +231,8 @@ describe('graphHtml — stages tab', () => {
     const html = graphHtml('graph TB\n  A --> B', 'file:///foo.php', 1, undefined, undefined, undefined, undefined, undefined, stages);
     assert.ok(html.includes('data-tab="stages"'), 'expected stages tab button');
     assert.ok(html.includes('id="stages-toolbar"'), 'expected stages toolbar');
+    assert.ok(html.includes('id="btn-goto-source-stages"'), 'expected stages source button');
+    assert.ok(html.includes('foo.php:1'), 'expected file:line source label in stages toolbar');
     assert.ok(html.includes('id="stages-panel"'), 'expected stages panel');
     assert.ok(html.includes('id="stages-content"'), 'expected stages content wrapper');
     assert.ok(html.includes('id="stages-container"'), 'expected stages container');
@@ -256,6 +258,8 @@ describe('graphHtml — stages tab', () => {
     const html = graphHtml('graph TB\n  A --> B', 'file:///foo.php', 1, undefined, undefined, undefined, undefined, undefined, stages);
     assert.ok(html.includes('btn-copy-stages'), 'expected btnCopyStages reference in JS');
     assert.ok(html.includes('JSON.stringify(STAGES'), 'expected JSON.stringify(STAGES) for copying raw format');
+    assert.ok(html.includes('btn-goto-source-stages'), 'expected stages source button reference in JS');
+    assert.ok(html.includes("command: 'gotoSource'"), 'expected gotoSource postMessage command');
   });
 
   it('tab switching logic includes stages toolbar', () => {
