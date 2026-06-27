@@ -316,8 +316,9 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
     #stages-toolbar button.text-btn:hover { color: var(--vscode-editor-foreground); }
     #stages-toolbar button:hover { background: var(--vscode-toolbar-hoverBackground); }
     #stages-toolbar button:active { background: var(--vscode-toolbar-activeBackground); }
-    #stages-content { overflow: auto; flex: 1; padding: 24px; }
-    .stage-item { margin-bottom: 24px; }
+    #stages-content { overflow: auto; flex: 1; padding: 0; }
+    .stage-item:first-child { border-top: 0; }
+    .stage-item { border-top: 1px solid var(--vscode-panel-border, var(--vscode-editorGroup-border, var(--vscode-editorWidget-border))); padding: 24px 0; }
     .stage-header { font-size: 13px; font-weight: 600; color: var(--vscode-editor-foreground); margin-bottom: 8px; opacity: 0.9; }
     .stage-jobs { display: flex; flex-wrap: wrap; gap: 8px; }
     .stage-job { padding: 8px 16px; background: #ECECFF; color: #000; border: 1px solid #9370DB; border-radius: 4px; font-size: 13px; font-family: var(--vscode-editor-font-family, ui-monospace, monospace); font-weight: 400; }
