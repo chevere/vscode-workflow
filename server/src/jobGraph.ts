@@ -338,8 +338,14 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
     #diagram .node.current-node > circle,
     #diagram .node.current-node > ellipse {
       stroke: var(--vscode-focusBorder) !important;
-      stroke-width: 3px !important;
+      stroke-width: 1px !important;
       fill: var(--vscode-editor-selectionBackground) !important;
+    }
+
+    /* ── Active stage job highlight ── */
+    .stage-job.current-job {
+      border-color: var(--vscode-focusBorder) !important;
+      background: var(--vscode-editor-selectionBackground) !important;
     }
 
     /* ── Mermaid syntax highlighting ── */
@@ -501,7 +507,7 @@ ${stages ? `
       stagesContainer.innerHTML = STAGES.map((jobs, idx) => {
         const jobsHtml = jobs.length === 0
           ? '<span class="stage-empty">No jobs</span>'
-          : jobs.map(job => \`<span class="stage-job">\${esc(job)}</span>\`).join('');
+          : jobs.map(job => \`<span class="stage-job" data-job="\${esc(job)}">\${esc(job)}</span>\`).join('');
         return \`<div class="stage-item">
           <div class="stage-jobs">\${jobsHtml}</div>
         </div>\`;
@@ -576,10 +582,18 @@ ${stages ? `
     document.querySelectorAll('#diagram .node').forEach(node => {
       node.classList.remove('current-node');
     });
+    document.querySelectorAll('.stage-job').forEach(job => {
+      job.classList.remove('current-job');
+    });
     if (!activeJobName) return;
+    // Highlight graph nodes
     const prefix = 'flowchart-' + activeJobName + '-';
     document.querySelectorAll('#diagram .node').forEach(node => {
       if (node.id.startsWith(prefix)) node.classList.add('current-node');
+    });
+    // Highlight stage jobs
+    document.querySelectorAll('.stage-job').forEach(job => {
+      if (job.dataset.job === activeJobName) job.classList.add('current-job');
     });
   }
 
