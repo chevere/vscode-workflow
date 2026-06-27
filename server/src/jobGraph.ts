@@ -325,7 +325,10 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
     .stage-item { margin-bottom: 24px; }
     .stage-header { font-size: 13px; font-weight: 600; color: var(--vscode-editor-foreground); margin-bottom: 8px; opacity: 0.9; }
     .stage-jobs { display: flex; flex-wrap: wrap; gap: 8px; }
-    .stage-job { padding: 6px 12px; background: var(--vscode-button-secondaryBackground, var(--vscode-badge-background)); color: var(--vscode-button-secondaryForeground, var(--vscode-badge-foreground)); border-radius: 4px; font-size: 12px; font-family: var(--vscode-editor-font-family, ui-monospace, monospace); }
+    .stage-job { padding: 8px 16px; background: #ECECFF; color: #000; border: 1px solid #9370DB; border-radius: 4px; font-size: 13px; font-family: var(--vscode-editor-font-family, ui-monospace, monospace); font-weight: 400; }
+    .vscode-dark .stage-job { background: #1f2020; color: #fff; border-color: #555; }
+    .vscode-high-contrast .stage-job, .vscode-high-contrast-light .stage-job { background: #f2f2f2; color: #000; border: 2px solid #000; }
+    .vscode-high-contrast .stage-job { background: #1f1f1f; color: #fff; border-color: #fff; }
     .stage-empty { color: var(--vscode-descriptionForeground); font-style: italic; font-size: 12px; }
 
 
@@ -500,7 +503,6 @@ ${stages ? `
           ? '<span class="stage-empty">No jobs</span>'
           : jobs.map(job => \`<span class="stage-job">\${esc(job)}</span>\`).join('');
         return \`<div class="stage-item">
-          <div class="stage-header">Stage \${idx}</div>
           <div class="stage-jobs">\${jobsHtml}</div>
         </div>\`;
       }).join('');
