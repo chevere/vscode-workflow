@@ -266,15 +266,12 @@ describe('graphHtml — stages tab', () => {
     const stages = [['job1', 'job2'], ['job3']];
     const html = graphHtml('graph TB\n  A --> B', 'file:///foo.php', 1, undefined, undefined, undefined, undefined, undefined, stages);
     assert.ok(html.includes('stagesToolbar'), 'expected stagesToolbar variable in tab switching logic');
-    assert.ok(html.includes("isStages = tab.dataset.tab === 'stages'"), 'expected isStages check');
     assert.ok(html.includes('stagesToolbar.style.display = isStages'), 'expected stages toolbar show/hide logic');
   });
 
   it('renders stage items with correct structure', () => {
     const stages = [['job1', 'job2'], ['job3']];
     const html = graphHtml('graph TB\n  A --> B', 'file:///foo.php', 1, undefined, undefined, undefined, undefined, undefined, stages);
-    assert.ok(html.includes('Stage ${idx}'), 'expected stage header template');
-    assert.ok(html.includes('stage-header'), 'expected stage-header class');
     assert.ok(html.includes('stage-jobs'), 'expected stage-jobs class');
     assert.ok(html.includes('stage-job'), 'expected stage-job class');
   });

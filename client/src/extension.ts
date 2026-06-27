@@ -16,6 +16,34 @@ const graphPanels = new Map<string, { panel: vscode.WebviewPanel; offset: number
 const DEBOUNCE_MS = 600;
 const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
+function currentEditorOffset(uriString: string): number | undefined {
+  const editor = vscode.window.visibleTextEditors.find(
+    e => e.document.uri.toString() === uriString
+  );
+  if (!editor) return undefined;
+  return editor.document.offsetAt(editor.selection.active);
+}
+
+async function highlightPanelAtOffset(uriString: string, offset: number): Promise<void> {
+  const entry = graphPanels.get(uriString);
+  if (!entry) return;
+
+  const jobs = await client.sendRequest<{ name: string; start: number; end: number }[]>(
+    'chevereWorkflow/jobPositions',
+    { uri: uriString }
+  );
+  const active = jobs.find(j => offset >= j.start && offset <= j.end);
+  const message = { command: 'highlightNode', jobName: active?.name ?? null };
+
+  // Webview HTML replacement during refresh can race with message delivery.
+  // Send once now and once shortly after to ensure the new page receives it.
+  entry.panel.webview.postMessage(message);
+  setTimeout(() => {
+    const latest = graphPanels.get(uriString);
+    if (latest) latest.panel.webview.postMessage(message);
+  }, 100);
+}
+
 class WorkflowCodeLensProvider implements vscode.CodeLensProvider {
   provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
     const lenses: vscode.CodeLens[] = [];
@@ -44,6 +72,7 @@ class WorkflowCodeLensProvider implements vscode.CodeLensProvider {
 async function refreshPanel(uriString: string, offset: number): Promise<void> {
   const entry = graphPanels.get(uriString);
   if (!entry) return;
+  entry.offset = offset;
   const result = await client.sendRequest('chevereWorkflow/jobGraph', {
     uri: uriString,
     offset,
@@ -53,6 +82,7 @@ async function refreshPanel(uriString: string, offset: number): Promise<void> {
   });
   if (result && graphPanels.has(uriString)) {
     entry.panel.webview.html = result as string;
+    await highlightPanelAtOffset(uriString, offset);
   }
 }
 
@@ -121,12 +151,8 @@ export function activate(context: vscode.ExtensionContext) {
       const entry = graphPanels.get(uriString);
       if (!entry) return;
       const offset = e.textEditor.document.offsetAt(e.selections[0].active);
-      const jobs = await client.sendRequest<{ name: string; start: number; end: number }[]>(
-        'chevereWorkflow/jobPositions',
-        { uri: uriString }
-      );
-      const active = jobs.find(j => offset >= j.start && offset <= j.end);
-      entry.panel.webview.postMessage({ command: 'highlightNode', jobName: active?.name ?? null });
+      entry.offset = offset;
+      await highlightPanelAtOffset(uriString, offset);
     })
   );
 
@@ -140,7 +166,9 @@ export function activate(context: vscode.ExtensionContext) {
       debounceTimers.set(uriString, setTimeout(() => {
         debounceTimers.delete(uriString);
         const entry = graphPanels.get(uriString);
-        if (entry) refreshPanel(uriString, entry.offset);
+        if (!entry) return;
+        const offset = currentEditorOffset(uriString) ?? entry.offset;
+        void refreshPanel(uriString, offset);
       }, DEBOUNCE_MS));
     })
   );
@@ -216,6 +244,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (result) {
           panel.webview.html = result as string;
           graphPanels.set(uriString, { panel, offset, mermaidWebviewUri, codiconCssUri, cspSource });
+          await highlightPanelAtOffset(uriString, offset);
 
           panel.onDidDispose(() => {
             graphPanels.delete(uriString);

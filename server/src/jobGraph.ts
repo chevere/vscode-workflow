@@ -319,7 +319,6 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
     #stages-content { overflow: auto; flex: 1; padding: 0; }
     .stage-item:first-child { border-top: 0; }
     .stage-item { border-top: 1px solid var(--vscode-panel-border, var(--vscode-editorGroup-border, var(--vscode-editorWidget-border))); padding: 24px 0; }
-    .stage-header { font-size: 13px; font-weight: 600; color: var(--vscode-editor-foreground); margin-bottom: 8px; opacity: 0.9; }
     .stage-jobs { display: flex; flex-wrap: wrap; gap: 8px; }
     .stage-job { padding: 8px 16px; background: #ECECFF; color: #000; border: 1px solid #9370DB; border-radius: 4px; font-size: 13px; font-family: var(--vscode-editor-font-family, ui-monospace, monospace); font-weight: 400; }
     .vscode-dark .stage-job { background: #1f2020; color: #fff; border-color: #555; }
@@ -414,6 +413,16 @@ ${stages ? `
   const STAGES = ${stagesLiteral};
   const vscodeApi = typeof acquireVsCodeApi === 'function' ? acquireVsCodeApi() : null;
 
+  function readState() {
+    return (vscodeApi && vscodeApi.getState()) || {};
+  }
+
+  function writeState(partial) {
+    if (!vscodeApi) return;
+    const current = readState();
+    vscodeApi.setState({ ...current, ...partial });
+  }
+
   // ── Tabs ─────────────────────────────────────────────────────────────────
   const toolbar = document.getElementById('graph-toolbar');
   const stagesToolbar = document.getElementById('stages-toolbar');
@@ -437,16 +446,14 @@ ${stages ? `
       const tabName = tab.dataset.tab;
       activateTab(tabName);
       // Persist the active tab state
-      if (vscodeApi) vscodeApi.setState({ activeTab: tabName });
+      writeState({ activeTab: tabName });
     });
   });
 
   // Restore the active tab from saved state
-  if (vscodeApi) {
-    const state = vscodeApi.getState();
-    if (state && state.activeTab) {
-      activateTab(state.activeTab);
-    }
+  {
+    const state = readState();
+    if (state.activeTab) activateTab(state.activeTab);
   }
 
   // ── Copy Mermaid source ──────────────────────────────────────────────────
@@ -522,6 +529,10 @@ ${stages ? `
     zoomLabel.textContent = Math.round(scale * 100) + '%';
   }
 
+  function persistGraphView() {
+    writeState({ graphView: { scale, tx, ty } });
+  }
+
   function fitView() {
     // Reset so we can measure the natural size
     canvas.style.transform = 'none';
@@ -536,6 +547,26 @@ ${stages ? `
     tx = (vw - cw * scale) / 2;
     ty = (vh - ch * scale) / 2;
     applyTransform();
+  }
+
+  function restoreGraphViewOrFit() {
+    const state = readState();
+    const graphView = state.graphView;
+    if (
+      graphView &&
+      Number.isFinite(graphView.scale) &&
+      Number.isFinite(graphView.tx) &&
+      Number.isFinite(graphView.ty) &&
+      graphView.scale > 0
+    ) {
+      scale = graphView.scale;
+      tx = graphView.tx;
+      ty = graphView.ty;
+      applyTransform();
+      return;
+    }
+    fitView();
+    persistGraphView();
   }
 
   // ── Render mermaid ───────────────────────────────────────────────────────
@@ -578,7 +609,7 @@ ${stages ? `
       const container = document.getElementById('diagram');
       container.replaceChildren(svgNode);
       applyHighlight();
-      requestAnimationFrame(() => requestAnimationFrame(fitView));
+      requestAnimationFrame(() => requestAnimationFrame(restoreGraphViewOrFit));
     });
   }
 
@@ -643,6 +674,7 @@ ${stages ? `
     ty = my - (my - ty) * delta;
     scale *= delta;
     applyTransform();
+    persistGraphView();
   }, { passive: false });
 
   viewport.addEventListener('mousedown', e => {
@@ -655,12 +687,16 @@ ${stages ? `
     ty = startTy + e.clientY - startY;
     applyTransform();
   });
-  window.addEventListener('mouseup', () => { dragging = false; });
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    persistGraphView();
+  });
 
-  document.getElementById('btn-zoom-in').addEventListener('click',  () => { scale *= 1.2; applyTransform(); });
-  document.getElementById('btn-zoom-out').addEventListener('click', () => { scale /= 1.2; applyTransform(); });
-  document.getElementById('btn-reset').addEventListener('click',    () => { scale = 1; tx = 0; ty = 0; applyTransform(); });
-  document.getElementById('btn-fit').addEventListener('click',      fitView);
+  document.getElementById('btn-zoom-in').addEventListener('click',  () => { scale *= 1.2; applyTransform(); persistGraphView(); });
+  document.getElementById('btn-zoom-out').addEventListener('click', () => { scale /= 1.2; applyTransform(); persistGraphView(); });
+  document.getElementById('btn-reset').addEventListener('click',    () => { scale = 1; tx = 0; ty = 0; applyTransform(); persistGraphView(); });
+  document.getElementById('btn-fit').addEventListener('click',      () => { fitView(); persistGraphView(); });
 
   // ── Active job node highlight ─────────────────────────────────────────────
   window.addEventListener('message', (event) => {
