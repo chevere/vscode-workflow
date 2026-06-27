@@ -316,7 +316,12 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
     #code-panel pre { margin: 0; padding: 24px; overflow: auto; flex: 1; font-size: 13px; line-height: 1.6; color: var(--vscode-editor-foreground); white-space: pre; tab-size: 2; }
 
     /* ── Stages panel ── */
-    #stages-panel { flex-direction: column; overflow: auto; padding: 24px; }
+    #stages-panel { flex-direction: column; }
+    #stages-toolbar { display: none; align-items: center; justify-content: flex-end; gap: 0; padding: 2px 0; background: var(--vscode-editor-background); border-bottom: 1px solid var(--vscode-panel-border, var(--vscode-editorGroup-border, var(--vscode-editorWidget-border))); flex-shrink: 0; height: 28px; }
+    #stages-toolbar button { background: transparent; border: none; color: var(--vscode-icon-foreground, var(--vscode-editor-foreground)); border-radius: 0; padding: 0; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    #stages-toolbar button:hover { background: var(--vscode-toolbar-hoverBackground); }
+    #stages-toolbar button:active { background: var(--vscode-toolbar-activeBackground); }
+    #stages-content { overflow: auto; flex: 1; padding: 24px; }
     .stage-item { margin-bottom: 24px; }
     .stage-header { font-size: 13px; font-weight: 600; color: var(--vscode-editor-foreground); margin-bottom: 8px; opacity: 0.9; }
     .stage-jobs { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -390,8 +395,17 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
   <pre id="code-block"></pre>
 </div>
 ${stages ? `
+<div id="stages-toolbar">
+  <button id="btn-copy-stages" title="Copy to clipboard">
+    <i id="icon-copy-stages" class="codicon codicon-copy"></i>
+    <i id="icon-check-stages" class="codicon codicon-check" style="display:none"></i>
+  </button>
+</div>
+
 <div class="panel" id="stages-panel">
-  <div id="stages-container"></div>
+  <div id="stages-content">
+    <div id="stages-container"></div>
+  </div>
 </div>` : ''}
 
 <script nonce="${nonce}" src="${mermaidSrc}"></script>
@@ -408,19 +422,40 @@ ${stages ? `
   // ── Tabs ─────────────────────────────────────────────────────────────────
   const toolbar = document.getElementById('graph-toolbar');
   const codeToolbar = document.getElementById('code-toolbar');
+  const stagesToolbar = document.getElementById('stages-toolbar');
+
+  function activateTab(tabName) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    const tab = document.querySelector('.tab[data-tab="' + tabName + '"]');
+    if (!tab) return;
+    tab.classList.add('active');
+    const panelId = tabName + '-panel';
+    document.getElementById(panelId).classList.add('active');
+    const isGraph = tabName === 'graph';
+    const isCode = tabName === 'code';
+    const isStages = tabName === 'stages';
+    toolbar.style.display = isGraph ? '' : 'none';
+    codeToolbar.style.display = isCode ? 'flex' : 'none';
+    if (stagesToolbar) stagesToolbar.style.display = isStages ? 'flex' : 'none';
+  }
+
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-      tab.classList.add('active');
-      const panelId = tab.dataset.tab + '-panel';
-      document.getElementById(panelId).classList.add('active');
-      const isGraph = tab.dataset.tab === 'graph';
-      const isCode = tab.dataset.tab === 'code';
-      toolbar.style.display = isGraph ? '' : 'none';
-      codeToolbar.style.display = isCode ? 'flex' : 'none';
+      const tabName = tab.dataset.tab;
+      activateTab(tabName);
+      // Persist the active tab state
+      if (vscodeApi) vscodeApi.setState({ activeTab: tabName });
     });
   });
+
+  // Restore the active tab from saved state
+  if (vscodeApi) {
+    const state = vscodeApi.getState();
+    if (state && state.activeTab) {
+      activateTab(state.activeTab);
+    }
+  }
 
   // ── Code tab ─────────────────────────────────────────────────────────────
   function highlightMermaid(code) {
@@ -470,6 +505,17 @@ ${stages ? `
         </div>\`;
       }).join('');
     }
+
+    const btnCopyStages = document.getElementById('btn-copy-stages');
+    const iconCopyStages = document.getElementById('icon-copy-stages');
+    const iconCheckStages = document.getElementById('icon-check-stages');
+    btnCopyStages.addEventListener('click', () => {
+      navigator.clipboard.writeText(JSON.stringify(STAGES, null, 2)).then(() => {
+        iconCopyStages.style.display = 'none';
+        iconCheckStages.style.display = '';
+        setTimeout(() => { iconCopyStages.style.display = ''; iconCheckStages.style.display = 'none'; }, 1500);
+      });
+    });
   }
 
   // ── Homepage logo ─────────────────────────────────────────────────────────

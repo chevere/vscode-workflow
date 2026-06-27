@@ -223,6 +223,59 @@ describe('graphHtml — CSP nonce', () => {
   });
 });
 
+// ─── graphHtml — stages tab with copy button ──────────────────────────────────
+
+describe('graphHtml — stages tab', () => {
+  it('includes stages tab and toolbar when stages are provided', () => {
+    const stages = [['job1', 'job2'], ['job3']];
+    const html = graphHtml('graph TB\n  A --> B', 'file:///foo.php', 1, undefined, undefined, undefined, undefined, undefined, stages);
+    assert.ok(html.includes('data-tab="stages"'), 'expected stages tab button');
+    assert.ok(html.includes('id="stages-toolbar"'), 'expected stages toolbar');
+    assert.ok(html.includes('id="stages-panel"'), 'expected stages panel');
+    assert.ok(html.includes('id="stages-content"'), 'expected stages content wrapper');
+    assert.ok(html.includes('id="stages-container"'), 'expected stages container');
+  });
+
+  it('does not include stages tab when stages are undefined', () => {
+    const html = graphHtml('graph TB\n  A --> B', 'file:///foo.php', 1);
+    assert.ok(!html.includes('data-tab="stages"'), 'stages tab should not exist');
+    assert.ok(!html.includes('id="stages-toolbar"'), 'stages toolbar should not exist');
+    assert.ok(!html.includes('id="stages-panel"'), 'stages panel should not exist');
+  });
+
+  it('includes copy button for stages with correct IDs', () => {
+    const stages = [['job1', 'job2'], ['job3']];
+    const html = graphHtml('graph TB\n  A --> B', 'file:///foo.php', 1, undefined, undefined, undefined, undefined, undefined, stages);
+    assert.ok(html.includes('id="btn-copy-stages"'), 'expected stages copy button');
+    assert.ok(html.includes('id="icon-copy-stages"'), 'expected stages copy icon');
+    assert.ok(html.includes('id="icon-check-stages"'), 'expected stages check icon');
+  });
+
+  it('includes JavaScript to handle stages copy button click', () => {
+    const stages = [['job1', 'job2'], ['job3']];
+    const html = graphHtml('graph TB\n  A --> B', 'file:///foo.php', 1, undefined, undefined, undefined, undefined, undefined, stages);
+    assert.ok(html.includes('btn-copy-stages'), 'expected btnCopyStages reference in JS');
+    assert.ok(html.includes('JSON.stringify(STAGES'), 'expected JSON.stringify(STAGES) for copying raw format');
+  });
+
+  it('tab switching logic includes stages toolbar', () => {
+    const stages = [['job1', 'job2'], ['job3']];
+    const html = graphHtml('graph TB\n  A --> B', 'file:///foo.php', 1, undefined, undefined, undefined, undefined, undefined, stages);
+    assert.ok(html.includes('stagesToolbar'), 'expected stagesToolbar variable in tab switching logic');
+    assert.ok(html.includes("isStages = tab.dataset.tab === 'stages'"), 'expected isStages check');
+    assert.ok(html.includes('stagesToolbar.style.display = isStages'), 'expected stages toolbar show/hide logic');
+  });
+
+  it('renders stage items with correct structure', () => {
+    const stages = [['job1', 'job2'], ['job3']];
+    const html = graphHtml('graph TB\n  A --> B', 'file:///foo.php', 1, undefined, undefined, undefined, undefined, undefined, stages);
+    assert.ok(html.includes('Stage ${idx}'), 'expected stage header template');
+    assert.ok(html.includes('stage-header'), 'expected stage-header class');
+    assert.ok(html.includes('stage-jobs'), 'expected stage-jobs class');
+    assert.ok(html.includes('stage-job'), 'expected stage-job class');
+  });
+});
+
 // ─── buildPhpWrapper — namespace injection guard ──────────────────────────────
 
 describe('buildPhpWrapper — namespace injection guard', () => {
