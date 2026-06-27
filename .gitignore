@@ -7,6 +7,7 @@ out
 server/test/*.js
 server/test/*.js.map
 server/test/*.d.ts
+server/coverage/
 client/test/*.js
 client/test/*.js.map
 client/test/*.d.ts
