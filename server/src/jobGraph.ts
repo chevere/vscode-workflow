@@ -294,6 +294,7 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
     .toolbar button.text-btn { width: auto; padding: 2px 6px; font-size: 11px; font-family: var(--vscode-font-family, sans-serif); color: var(--vscode-descriptionForeground); }
     .toolbar button.text-btn:hover { color: var(--vscode-editor-foreground); }
     .toolbar-sep { width: 1px; height: 16px; background: var(--vscode-panel-border, var(--vscode-editorGroup-border)); margin: 0 4px; flex-shrink: 0; }
+    .toolbar-spacer { flex: 1; }
     .zoom-label { font-size: 11px; font-family: var(--vscode-font-family, sans-serif); color: var(--vscode-descriptionForeground); min-width: 38px; text-align: center; }
 
     /* ── Panels ── */
@@ -306,14 +307,6 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
     #graph-viewport:active { cursor: grabbing; }
     #graph-canvas { transform-origin: 0 0; display: inline-block; }
     #graph-canvas .mermaid svg { display: block; }
-
-    /* ── Code panel ── */
-    #code-panel { flex-direction: column; }
-    #code-toolbar { display: none; align-items: center; justify-content: flex-end; gap: 0; padding: 2px 0; background: var(--vscode-editor-background); border-bottom: 1px solid var(--vscode-panel-border, var(--vscode-editorGroup-border, var(--vscode-editorWidget-border))); flex-shrink: 0; height: 28px; }
-    #code-toolbar button { background: transparent; border: none; color: var(--vscode-icon-foreground, var(--vscode-editor-foreground)); border-radius: 0; padding: 0; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-    #code-toolbar button:hover { background: var(--vscode-toolbar-hoverBackground); }
-    #code-toolbar button:active { background: var(--vscode-toolbar-activeBackground); }
-    #code-panel pre { margin: 0; padding: 24px; overflow: auto; flex: 1; font-size: 13px; line-height: 1.6; color: var(--vscode-editor-foreground); white-space: pre; tab-size: 2; }
 
     /* ── Stages panel ── */
     #stages-panel { flex-direction: column; }
@@ -347,19 +340,12 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
       border-color: var(--vscode-focusBorder) !important;
       background: var(--vscode-editor-selectionBackground) !important;
     }
-
-    /* ── Mermaid syntax highlighting ── */
-    .mh-kw    { color: var(--vscode-symbolIcon-keywordForeground,  #569cd6); }
-    .mh-id    { color: var(--vscode-symbolIcon-variableForeground, #9cdcfe); }
-    .mh-op    { color: var(--vscode-editor-foreground); opacity: 0.55; }
-    .mh-label { color: var(--vscode-symbolIcon-stringForeground,   #ce9178); }
   </style>
 </head>
 <body>
 
 <div class="tabs">
-  <button class="tab active" data-tab="graph">Graph</button>
-  <button class="tab" data-tab="code">Mermaid</button>${stages ? `
+  <button class="tab active" data-tab="graph">Graph</button>${stages ? `
   <button class="tab" data-tab="stages">Stages</button>` : ''}
   <span class="tabs-spacer"></span>
   <button class="tabs-logo" id="btn-homepage" title="Chevere Workflow">
@@ -383,6 +369,12 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
   <button id="btn-export-png" class="text-btn" title="Export as PNG">PNG</button>
   <div class="toolbar-sep"></div>
   <button id="btn-goto-source" class="text-btn" title="Open source file">${escapeHtml(fileName)}:${sourceLine}</button>
+  <span class="toolbar-spacer"></span>
+  <div class="toolbar-sep"></div>
+  <button id="btn-copy" title="Copy Mermaid source">
+    <i id="icon-copy" class="codicon codicon-copy"></i>
+    <i id="icon-check" class="codicon codicon-check" style="display:none"></i>
+  </button>
 </div>
 
 <div class="panel active" id="graph-panel">
@@ -391,17 +383,6 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
       <div class="mermaid" id="diagram"></div>
     </div>
   </div>
-</div>
-
-<div id="code-toolbar">
-  <button id="btn-copy" title="Copy to clipboard">
-    <i id="icon-copy" class="codicon codicon-copy"></i>
-    <i id="icon-check" class="codicon codicon-check" style="display:none"></i>
-  </button>
-</div>
-
-<div class="panel" id="code-panel">
-  <pre id="code-block"></pre>
 </div>
 ${stages ? `
 <div id="stages-toolbar">
@@ -430,7 +411,6 @@ ${stages ? `
 
   // ── Tabs ─────────────────────────────────────────────────────────────────
   const toolbar = document.getElementById('graph-toolbar');
-  const codeToolbar = document.getElementById('code-toolbar');
   const stagesToolbar = document.getElementById('stages-toolbar');
 
   function activateTab(tabName) {
@@ -442,10 +422,8 @@ ${stages ? `
     const panelId = tabName + '-panel';
     document.getElementById(panelId).classList.add('active');
     const isGraph = tabName === 'graph';
-    const isCode = tabName === 'code';
     const isStages = tabName === 'stages';
     toolbar.style.display = isGraph ? '' : 'none';
-    codeToolbar.style.display = isCode ? 'flex' : 'none';
     if (stagesToolbar) stagesToolbar.style.display = isStages ? 'flex' : 'none';
   }
 
@@ -466,26 +444,7 @@ ${stages ? `
     }
   }
 
-  // ── Code tab ─────────────────────────────────────────────────────────────
-  function highlightMermaid(code) {
-    const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const wrap = (cls, s) => '<span class="mh-' + cls + '">' + esc(s) + '</span>';
-    return code.split('\\n').map(line => {
-      let m;
-      // graph TB; / flowchart LR;
-      if ((m = line.match(/^(\\s*)(graph|flowchart)(\\s+)(TB|LR|TD|RL|BT)(;?.*)/i)))
-        return esc(m[1]) + wrap('kw', m[2]) + esc(m[3]) + wrap('kw', m[4]) + esc(m[5]);
-      // edge: id --> |"label"| id
-      if ((m = line.match(/^(\\s*)(\\w+)(-->|-\\.->|==>|---)(\\|[^|]+\\|)(\\w+)(;?.*)/)))
-        return esc(m[1]) + wrap('id', m[2]) + wrap('op', m[3]) + wrap('label', m[4]) + wrap('id', m[5]) + esc(m[6]);
-      // node declaration: id(label)
-      if ((m = line.match(/^(\\s*)(\\w+)(\\([\\s\\S]*\\))(;?.*)/)))
-        return esc(m[1]) + wrap('id', m[2]) + wrap('label', m[3]) + esc(m[4]);
-      return esc(line);
-    }).join('\\n');
-  }
-  document.getElementById('code-block').innerHTML = highlightMermaid(SOURCE);
-
+  // ── Copy Mermaid source ──────────────────────────────────────────────────
   const btnCopy = document.getElementById('btn-copy');
   const iconCopy = document.getElementById('icon-copy');
   const iconCheck = document.getElementById('icon-check');
