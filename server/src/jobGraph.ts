@@ -184,7 +184,7 @@ export async function buildJobGraphHtml(
     }
     const sourceLine = cursorOffset !== undefined ? lineFromOffset(parsed.source, cursorOffset) : 1;
     const exportBaseName = parsed.workflowClassName?.split('\\').pop();
-    return graphHtml(result.mermaid, sourceUri, sourceLine, config.homepageUrl, config.mermaidScriptUri, config.codiconCssUri, config.cspSource, exportBaseName);
+    return graphHtml(result.mermaid, sourceUri, sourceLine, config.homepageUrl, config.mermaidScriptUri, config.codiconCssUri, config.cspSource, exportBaseName, result.stages);
   }
 
   // Fallback: extract the real workflow() expression from source and execute it via PHP
@@ -253,12 +253,13 @@ export function errorHtml(message: string, detail?: string): string {
 </html>`;
 }
 
-export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number, homepageUrl?: string, mermaidScriptUri?: string, codiconCssUri?: string, cspSource?: string, exportBaseName?: string): string {
+export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number, homepageUrl?: string, mermaidScriptUri?: string, codiconCssUri?: string, cspSource?: string, exportBaseName?: string, stages?: string[][]): string {
   // Safely embed the mermaid source as a JS string
   const jsLiteral = JSON.stringify(mermaid);
   const uriLiteral = JSON.stringify(sourceUri);
   const homepageLiteral = JSON.stringify(homepageUrl ?? null);
   const exportBaseNameLiteral = JSON.stringify(exportBaseName ?? null);
+  const stagesLiteral = JSON.stringify(stages ?? null);
   const fileName = sourceUri.split('/').pop() ?? sourceUri;
   const nonce = randomBytes(16).toString('base64');
   const mermaidSrc = mermaidScriptUri ?? '';
@@ -314,6 +315,15 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
     #code-toolbar button:active { background: var(--vscode-toolbar-activeBackground); }
     #code-panel pre { margin: 0; padding: 24px; overflow: auto; flex: 1; font-size: 13px; line-height: 1.6; color: var(--vscode-editor-foreground); white-space: pre; tab-size: 2; }
 
+    /* ── Stages panel ── */
+    #stages-panel { flex-direction: column; overflow: auto; padding: 24px; }
+    .stage-item { margin-bottom: 24px; }
+    .stage-header { font-size: 13px; font-weight: 600; color: var(--vscode-editor-foreground); margin-bottom: 8px; opacity: 0.9; }
+    .stage-jobs { display: flex; flex-wrap: wrap; gap: 8px; }
+    .stage-job { padding: 6px 12px; background: var(--vscode-button-secondaryBackground, var(--vscode-badge-background)); color: var(--vscode-button-secondaryForeground, var(--vscode-badge-foreground)); border-radius: 4px; font-size: 12px; font-family: var(--vscode-editor-font-family, ui-monospace, monospace); }
+    .stage-empty { color: var(--vscode-descriptionForeground); font-style: italic; font-size: 12px; }
+
+
     /* ── Active job node highlight ── */
     #diagram .node.current-node > rect,
     #diagram .node.current-node > polygon,
@@ -335,7 +345,8 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
 
 <div class="tabs">
   <button class="tab active" data-tab="graph">Graph</button>
-  <button class="tab" data-tab="code">Mermaid</button>
+  <button class="tab" data-tab="code">Mermaid</button>${stages ? `
+  <button class="tab" data-tab="stages">Stages</button>` : ''}
   <span class="tabs-spacer"></span>
   <button class="tabs-logo" id="btn-homepage" title="Chevere Workflow">
     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 395.5 395.5" aria-hidden="true">
@@ -378,6 +389,10 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
 <div class="panel" id="code-panel">
   <pre id="code-block"></pre>
 </div>
+${stages ? `
+<div class="panel" id="stages-panel">
+  <div id="stages-container"></div>
+</div>` : ''}
 
 <script nonce="${nonce}" src="${mermaidSrc}"></script>
 <script nonce="${nonce}">
@@ -387,6 +402,7 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
   const SOURCE_LINE = ${sourceLine};
   const HOMEPAGE_URL = ${homepageLiteral};
   const EXPORT_BASE_NAME = ${exportBaseNameLiteral};
+  const STAGES = ${stagesLiteral};
   const vscodeApi = typeof acquireVsCodeApi === 'function' ? acquireVsCodeApi() : null;
 
   // ── Tabs ─────────────────────────────────────────────────────────────────
@@ -400,8 +416,9 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
       const panelId = tab.dataset.tab + '-panel';
       document.getElementById(panelId).classList.add('active');
       const isGraph = tab.dataset.tab === 'graph';
+      const isCode = tab.dataset.tab === 'code';
       toolbar.style.display = isGraph ? '' : 'none';
-      codeToolbar.style.display = isGraph ? 'none' : 'flex';
+      codeToolbar.style.display = isCode ? 'flex' : 'none';
     });
   });
 
@@ -435,6 +452,25 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
       setTimeout(() => { iconCopy.style.display = ''; iconCheck.style.display = 'none'; }, 1500);
     });
   });
+
+  // ── Stages tab ───────────────────────────────────────────────────────────
+  if (STAGES) {
+    const stagesContainer = document.getElementById('stages-container');
+    const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    if (STAGES.length === 0) {
+      stagesContainer.innerHTML = '<p class="stage-empty">No stages defined</p>';
+    } else {
+      stagesContainer.innerHTML = STAGES.map((jobs, idx) => {
+        const jobsHtml = jobs.length === 0
+          ? '<span class="stage-empty">No jobs</span>'
+          : jobs.map(job => \`<span class="stage-job">\${esc(job)}</span>\`).join('');
+        return \`<div class="stage-item">
+          <div class="stage-header">Stage \${idx}</div>
+          <div class="stage-jobs">\${jobsHtml}</div>
+        </div>\`;
+      }).join('');
+    }
+  }
 
   // ── Homepage logo ─────────────────────────────────────────────────────────
   const btnHomepage = document.getElementById('btn-homepage');

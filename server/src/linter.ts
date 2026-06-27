@@ -43,7 +43,7 @@ export interface VariableSchema {
 }
 
 export type LintResult =
-  | { ok: true; violations: LintViolation[]; mermaid: string; variables?: Record<string, VariableSchema> }
+  | { ok: true; violations: LintViolation[]; stages: string[][]; mermaid: string; variables?: Record<string, VariableSchema> }
   | { ok: false; error: string };
 
 // Write the lint helper once per process to a temp file
