@@ -10,7 +10,8 @@ VS Code extension providing complete language server support for [Chevere Workfl
 - **Inlay hints**: Shows parameter types before argument values and return types after `response()` calls
 - **Hover**: Displays full method signatures with parameter types, defaults, and required/optional status; hovering over `variable('name')` shows the variable's schema
 - **Completion**: Suggests available parameter names (required first) with snippet expansion; offers `response()` references to other jobs in the workflow
-- **Job graph**: Interactive Mermaid visualization of the workflow dependency graph, with zoom/pan controls, a raw Mermaid syntax tab, and a copy-to-clipboard button
+- **Graph**: Interactive Mermaid visualization of the workflow dependency graph, with zoom/pan controls, export SVG/PNG and copy-to-clipboard Mermaid source code button
+- **Stages**: Interactive lists stages (execution flow)
 
 ## Requirements
 
