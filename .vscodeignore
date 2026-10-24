@@ -29,6 +29,7 @@ server/tsconfig.test.json
 
 # Documentation
 docs/**
+images/**
 CLAUDE.md
 AGENTS.md
 
