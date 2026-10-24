@@ -96,7 +96,7 @@
   },
   "dependencies": {
     "@vscode/codicons": "^0.0.45",
-    "mermaid": "^11.13.0",
+    "mermaid": "^11.15.0",
     "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
