@@ -184,7 +184,7 @@ export async function buildJobGraphHtml(
     }
     const sourceLine = cursorOffset !== undefined ? lineFromOffset(parsed.source, cursorOffset) : 1;
     const exportBaseName = parsed.workflowClassName?.split('\\').pop();
-    return graphHtml(result.mermaid, sourceUri, sourceLine, config.homepageUrl, config.mermaidScriptUri, config.codiconCssUri, config.cspSource, exportBaseName);
+    return graphHtml(result.mermaid, sourceUri, sourceLine, config.homepageUrl, config.mermaidScriptUri, config.codiconCssUri, config.cspSource, exportBaseName, result.stages);
   }
 
   // Fallback: extract the real workflow() expression from source and execute it via PHP
@@ -253,12 +253,13 @@ export function errorHtml(message: string, detail?: string): string {
 </html>`;
 }
 
-export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number, homepageUrl?: string, mermaidScriptUri?: string, codiconCssUri?: string, cspSource?: string, exportBaseName?: string): string {
+export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number, homepageUrl?: string, mermaidScriptUri?: string, codiconCssUri?: string, cspSource?: string, exportBaseName?: string, stages?: string[][]): string {
   // Safely embed the mermaid source as a JS string
   const jsLiteral = JSON.stringify(mermaid);
   const uriLiteral = JSON.stringify(sourceUri);
   const homepageLiteral = JSON.stringify(homepageUrl ?? null);
   const exportBaseNameLiteral = JSON.stringify(exportBaseName ?? null);
+  const stagesLiteral = JSON.stringify(stages ?? null);
   const fileName = sourceUri.split('/').pop() ?? sourceUri;
   const nonce = randomBytes(16).toString('base64');
   const mermaidSrc = mermaidScriptUri ?? '';
@@ -293,6 +294,7 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
     .toolbar button.text-btn { width: auto; padding: 2px 6px; font-size: 11px; font-family: var(--vscode-font-family, sans-serif); color: var(--vscode-descriptionForeground); }
     .toolbar button.text-btn:hover { color: var(--vscode-editor-foreground); }
     .toolbar-sep { width: 1px; height: 16px; background: var(--vscode-panel-border, var(--vscode-editorGroup-border)); margin: 0 4px; flex-shrink: 0; }
+    .toolbar-spacer { flex: 1; }
     .zoom-label { font-size: 11px; font-family: var(--vscode-font-family, sans-serif); color: var(--vscode-descriptionForeground); min-width: 38px; text-align: center; }
 
     /* ── Panels ── */
@@ -306,13 +308,24 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
     #graph-canvas { transform-origin: 0 0; display: inline-block; }
     #graph-canvas .mermaid svg { display: block; }
 
-    /* ── Code panel ── */
-    #code-panel { flex-direction: column; }
-    #code-toolbar { display: none; align-items: center; justify-content: flex-end; gap: 0; padding: 2px 0; background: var(--vscode-editor-background); border-bottom: 1px solid var(--vscode-panel-border, var(--vscode-editorGroup-border, var(--vscode-editorWidget-border))); flex-shrink: 0; height: 28px; }
-    #code-toolbar button { background: transparent; border: none; color: var(--vscode-icon-foreground, var(--vscode-editor-foreground)); border-radius: 0; padding: 0; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-    #code-toolbar button:hover { background: var(--vscode-toolbar-hoverBackground); }
-    #code-toolbar button:active { background: var(--vscode-toolbar-activeBackground); }
-    #code-panel pre { margin: 0; padding: 24px; overflow: auto; flex: 1; font-size: 13px; line-height: 1.6; color: var(--vscode-editor-foreground); white-space: pre; tab-size: 2; }
+    /* ── Stages panel ── */
+    #stages-panel { flex-direction: column; }
+    #stages-toolbar { display: none; align-items: center; justify-content: flex-end; gap: 0; padding: 2px 0; background: var(--vscode-editor-background); border-bottom: 1px solid var(--vscode-panel-border, var(--vscode-editorGroup-border, var(--vscode-editorWidget-border))); flex-shrink: 0; height: 28px; }
+    #stages-toolbar button { background: transparent; border: none; color: var(--vscode-icon-foreground, var(--vscode-editor-foreground)); border-radius: 0; padding: 0; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    #stages-toolbar button.text-btn { width: auto; padding: 2px 6px; font-size: 11px; font-family: var(--vscode-font-family, sans-serif); color: var(--vscode-descriptionForeground); }
+    #stages-toolbar button.text-btn:hover { color: var(--vscode-editor-foreground); }
+    #stages-toolbar button:hover { background: var(--vscode-toolbar-hoverBackground); }
+    #stages-toolbar button:active { background: var(--vscode-toolbar-activeBackground); }
+    #stages-content { overflow: auto; flex: 1; padding: 0; }
+    .stage-item:first-child { border-top: 0; }
+    .stage-item { border-top: 1px solid var(--vscode-panel-border, var(--vscode-editorGroup-border, var(--vscode-editorWidget-border))); padding: 24px 0; }
+    .stage-jobs { display: flex; flex-wrap: wrap; gap: 8px; }
+    .stage-job { padding: 8px 16px; background: #ECECFF; color: #000; border: 1px solid #9370DB; border-radius: 4px; font-size: 13px; font-family: var(--vscode-editor-font-family, ui-monospace, monospace); font-weight: 400; }
+    .vscode-dark .stage-job { background: #1f2020; color: #fff; border-color: #555; }
+    .vscode-high-contrast .stage-job, .vscode-high-contrast-light .stage-job { background: #f2f2f2; color: #000; border: 2px solid #000; }
+    .vscode-high-contrast .stage-job { background: #1f1f1f; color: #fff; border-color: #fff; }
+    .stage-empty { color: var(--vscode-descriptionForeground); font-style: italic; font-size: 12px; }
+
 
     /* ── Active job node highlight ── */
     #diagram .node.current-node > rect,
@@ -320,22 +333,22 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
     #diagram .node.current-node > circle,
     #diagram .node.current-node > ellipse {
       stroke: var(--vscode-focusBorder) !important;
-      stroke-width: 3px !important;
+      stroke-width: 1px !important;
       fill: var(--vscode-editor-selectionBackground) !important;
     }
 
-    /* ── Mermaid syntax highlighting ── */
-    .mh-kw    { color: var(--vscode-symbolIcon-keywordForeground,  #569cd6); }
-    .mh-id    { color: var(--vscode-symbolIcon-variableForeground, #9cdcfe); }
-    .mh-op    { color: var(--vscode-editor-foreground); opacity: 0.55; }
-    .mh-label { color: var(--vscode-symbolIcon-stringForeground,   #ce9178); }
+    /* ── Active stage job highlight ── */
+    .stage-job.current-job {
+      border-color: var(--vscode-focusBorder) !important;
+      background: var(--vscode-editor-selectionBackground) !important;
+    }
   </style>
 </head>
 <body>
 
 <div class="tabs">
-  <button class="tab active" data-tab="graph">Graph</button>
-  <button class="tab" data-tab="code">Mermaid</button>
+  <button class="tab active" data-tab="graph">Graph</button>${stages ? `
+  <button class="tab" data-tab="stages">Stages</button>` : ''}
   <span class="tabs-spacer"></span>
   <button class="tabs-logo" id="btn-homepage" title="Chevere Workflow">
     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 395.5 395.5" aria-hidden="true">
@@ -356,8 +369,14 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
   <div class="toolbar-sep"></div>
   <button id="btn-export-svg" class="text-btn" title="Export as SVG">SVG</button>
   <button id="btn-export-png" class="text-btn" title="Export as PNG">PNG</button>
+  <span class="toolbar-spacer"></span>
   <div class="toolbar-sep"></div>
   <button id="btn-goto-source" class="text-btn" title="Open source file">${escapeHtml(fileName)}:${sourceLine}</button>
+  <div class="toolbar-sep"></div>
+  <button id="btn-copy" title="Copy Mermaid source">
+    <i id="icon-copy" class="codicon codicon-copy"></i>
+    <i id="icon-check" class="codicon codicon-check" style="display:none"></i>
+  </button>
 </div>
 
 <div class="panel active" id="graph-panel">
@@ -367,17 +386,21 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
     </div>
   </div>
 </div>
-
-<div id="code-toolbar">
-  <button id="btn-copy" title="Copy to clipboard">
-    <i id="icon-copy" class="codicon codicon-copy"></i>
-    <i id="icon-check" class="codicon codicon-check" style="display:none"></i>
+${stages ? `
+<div id="stages-toolbar">
+  <button id="btn-goto-source-stages" class="text-btn" title="Open source file">${escapeHtml(fileName)}:${sourceLine}</button>
+  <div class="toolbar-sep"></div>
+  <button id="btn-copy-stages" title="Copy to clipboard">
+    <i id="icon-copy-stages" class="codicon codicon-copy"></i>
+    <i id="icon-check-stages" class="codicon codicon-check" style="display:none"></i>
   </button>
 </div>
 
-<div class="panel" id="code-panel">
-  <pre id="code-block"></pre>
-</div>
+<div class="panel" id="stages-panel">
+  <div id="stages-content">
+    <div id="stages-container"></div>
+  </div>
+</div>` : ''}
 
 <script nonce="${nonce}" src="${mermaidSrc}"></script>
 <script nonce="${nonce}">
@@ -387,44 +410,53 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
   const SOURCE_LINE = ${sourceLine};
   const HOMEPAGE_URL = ${homepageLiteral};
   const EXPORT_BASE_NAME = ${exportBaseNameLiteral};
+  const STAGES = ${stagesLiteral};
   const vscodeApi = typeof acquireVsCodeApi === 'function' ? acquireVsCodeApi() : null;
+
+  function readState() {
+    return (vscodeApi && vscodeApi.getState()) || {};
+  }
+
+  function writeState(partial) {
+    if (!vscodeApi) return;
+    const current = readState();
+    vscodeApi.setState({ ...current, ...partial });
+  }
 
   // ── Tabs ─────────────────────────────────────────────────────────────────
   const toolbar = document.getElementById('graph-toolbar');
-  const codeToolbar = document.getElementById('code-toolbar');
+  const stagesToolbar = document.getElementById('stages-toolbar');
+
+  function activateTab(tabName) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    const tab = document.querySelector('.tab[data-tab="' + tabName + '"]');
+    if (!tab) return;
+    tab.classList.add('active');
+    const panelId = tabName + '-panel';
+    document.getElementById(panelId).classList.add('active');
+    const isGraph = tabName === 'graph';
+    const isStages = tabName === 'stages';
+    toolbar.style.display = isGraph ? '' : 'none';
+    if (stagesToolbar) stagesToolbar.style.display = isStages ? 'flex' : 'none';
+  }
+
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-      tab.classList.add('active');
-      const panelId = tab.dataset.tab + '-panel';
-      document.getElementById(panelId).classList.add('active');
-      const isGraph = tab.dataset.tab === 'graph';
-      toolbar.style.display = isGraph ? '' : 'none';
-      codeToolbar.style.display = isGraph ? 'none' : 'flex';
+      const tabName = tab.dataset.tab;
+      activateTab(tabName);
+      // Persist the active tab state
+      writeState({ activeTab: tabName });
     });
   });
 
-  // ── Code tab ─────────────────────────────────────────────────────────────
-  function highlightMermaid(code) {
-    const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const wrap = (cls, s) => '<span class="mh-' + cls + '">' + esc(s) + '</span>';
-    return code.split('\\n').map(line => {
-      let m;
-      // graph TB; / flowchart LR;
-      if ((m = line.match(/^(\\s*)(graph|flowchart)(\\s+)(TB|LR|TD|RL|BT)(;?.*)/i)))
-        return esc(m[1]) + wrap('kw', m[2]) + esc(m[3]) + wrap('kw', m[4]) + esc(m[5]);
-      // edge: id --> |"label"| id
-      if ((m = line.match(/^(\\s*)(\\w+)(-->|-\\.->|==>|---)(\\|[^|]+\\|)(\\w+)(;?.*)/)))
-        return esc(m[1]) + wrap('id', m[2]) + wrap('op', m[3]) + wrap('label', m[4]) + wrap('id', m[5]) + esc(m[6]);
-      // node declaration: id(label)
-      if ((m = line.match(/^(\\s*)(\\w+)(\\([\\s\\S]*\\))(;?.*)/)))
-        return esc(m[1]) + wrap('id', m[2]) + wrap('label', m[3]) + esc(m[4]);
-      return esc(line);
-    }).join('\\n');
+  // Restore the active tab from saved state
+  {
+    const state = readState();
+    if (state.activeTab) activateTab(state.activeTab);
   }
-  document.getElementById('code-block').innerHTML = highlightMermaid(SOURCE);
 
+  // ── Copy Mermaid source ──────────────────────────────────────────────────
   const btnCopy = document.getElementById('btn-copy');
   const iconCopy = document.getElementById('icon-copy');
   const iconCheck = document.getElementById('icon-check');
@@ -436,6 +468,35 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
     });
   });
 
+  // ── Stages tab ───────────────────────────────────────────────────────────
+  if (STAGES) {
+    const stagesContainer = document.getElementById('stages-container');
+    const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    if (STAGES.length === 0) {
+      stagesContainer.innerHTML = '<p class="stage-empty">No stages defined</p>';
+    } else {
+      stagesContainer.innerHTML = STAGES.map((jobs, idx) => {
+        const jobsHtml = jobs.length === 0
+          ? '<span class="stage-empty">No jobs</span>'
+          : jobs.map(job => \`<span class="stage-job" data-job="\${esc(job)}">\${esc(job)}</span>\`).join('');
+        return \`<div class="stage-item">
+          <div class="stage-jobs">\${jobsHtml}</div>
+        </div>\`;
+      }).join('');
+    }
+
+    const btnCopyStages = document.getElementById('btn-copy-stages');
+    const iconCopyStages = document.getElementById('icon-copy-stages');
+    const iconCheckStages = document.getElementById('icon-check-stages');
+    btnCopyStages.addEventListener('click', () => {
+      navigator.clipboard.writeText(JSON.stringify(STAGES, null, 2)).then(() => {
+        iconCopyStages.style.display = 'none';
+        iconCheckStages.style.display = '';
+        setTimeout(() => { iconCopyStages.style.display = ''; iconCheckStages.style.display = 'none'; }, 1500);
+      });
+    });
+  }
+
   // ── Homepage logo ─────────────────────────────────────────────────────────
   const btnHomepage = document.getElementById('btn-homepage');
   if (btnHomepage && HOMEPAGE_URL && vscodeApi) {
@@ -445,9 +506,15 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
   }
 
   // ── Go to source ─────────────────────────────────────────────────────────
-  document.getElementById('btn-goto-source').addEventListener('click', () => {
+  function gotoSource() {
     if (vscodeApi) vscodeApi.postMessage({ command: 'gotoSource', uri: SOURCE_URI, line: SOURCE_LINE });
-  });
+  }
+
+  const btnGotoSource = document.getElementById('btn-goto-source');
+  if (btnGotoSource) btnGotoSource.addEventListener('click', gotoSource);
+
+  const btnGotoSourceStages = document.getElementById('btn-goto-source-stages');
+  if (btnGotoSourceStages) btnGotoSourceStages.addEventListener('click', gotoSource);
 
   // ── Pan / Zoom ────────────────────────────────────────────────────────────
   const viewport  = document.getElementById('graph-viewport');
@@ -460,6 +527,10 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
   function applyTransform() {
     canvas.style.transform = \`translate(\${tx}px, \${ty}px) scale(\${scale})\`;
     zoomLabel.textContent = Math.round(scale * 100) + '%';
+  }
+
+  function persistGraphView() {
+    writeState({ graphView: { scale, tx, ty } });
   }
 
   function fitView() {
@@ -478,6 +549,26 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
     applyTransform();
   }
 
+  function restoreGraphViewOrFit() {
+    const state = readState();
+    const graphView = state.graphView;
+    if (
+      graphView &&
+      Number.isFinite(graphView.scale) &&
+      Number.isFinite(graphView.tx) &&
+      Number.isFinite(graphView.ty) &&
+      graphView.scale > 0
+    ) {
+      scale = graphView.scale;
+      tx = graphView.tx;
+      ty = graphView.ty;
+      applyTransform();
+      return;
+    }
+    fitView();
+    persistGraphView();
+  }
+
   // ── Render mermaid ───────────────────────────────────────────────────────
   function getMermaidTheme() {
     const cl = document.body.classList;
@@ -492,10 +583,18 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
     document.querySelectorAll('#diagram .node').forEach(node => {
       node.classList.remove('current-node');
     });
+    document.querySelectorAll('.stage-job').forEach(job => {
+      job.classList.remove('current-job');
+    });
     if (!activeJobName) return;
+    // Highlight graph nodes
     const prefix = 'flowchart-' + activeJobName + '-';
     document.querySelectorAll('#diagram .node').forEach(node => {
       if (node.id.startsWith(prefix)) node.classList.add('current-node');
+    });
+    // Highlight stage jobs
+    document.querySelectorAll('.stage-job').forEach(job => {
+      if (job.dataset.job === activeJobName) job.classList.add('current-job');
     });
   }
 
@@ -510,7 +609,7 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
       const container = document.getElementById('diagram');
       container.replaceChildren(svgNode);
       applyHighlight();
-      requestAnimationFrame(() => requestAnimationFrame(fitView));
+      requestAnimationFrame(() => requestAnimationFrame(restoreGraphViewOrFit));
     });
   }
 
@@ -575,6 +674,7 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
     ty = my - (my - ty) * delta;
     scale *= delta;
     applyTransform();
+    persistGraphView();
   }, { passive: false });
 
   viewport.addEventListener('mousedown', e => {
@@ -587,12 +687,16 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
     ty = startTy + e.clientY - startY;
     applyTransform();
   });
-  window.addEventListener('mouseup', () => { dragging = false; });
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    persistGraphView();
+  });
 
-  document.getElementById('btn-zoom-in').addEventListener('click',  () => { scale *= 1.2; applyTransform(); });
-  document.getElementById('btn-zoom-out').addEventListener('click', () => { scale /= 1.2; applyTransform(); });
-  document.getElementById('btn-reset').addEventListener('click',    () => { scale = 1; tx = 0; ty = 0; applyTransform(); });
-  document.getElementById('btn-fit').addEventListener('click',      fitView);
+  document.getElementById('btn-zoom-in').addEventListener('click',  () => { scale *= 1.2; applyTransform(); persistGraphView(); });
+  document.getElementById('btn-zoom-out').addEventListener('click', () => { scale /= 1.2; applyTransform(); persistGraphView(); });
+  document.getElementById('btn-reset').addEventListener('click',    () => { scale = 1; tx = 0; ty = 0; applyTransform(); persistGraphView(); });
+  document.getElementById('btn-fit').addEventListener('click',      () => { fitView(); persistGraphView(); });
 
   // ── Active job node highlight ─────────────────────────────────────────────
   window.addEventListener('message', (event) => {

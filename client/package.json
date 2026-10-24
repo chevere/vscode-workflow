@@ -5,16 +5,27 @@
   "scripts": {
     "compile": "tsc -p ./tsconfig.json",
     "watch": "tsc -p ./tsconfig.json -w",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "test:unit": "ts-mocha --project tsconfig.test.json 'test/**/*.test.ts'",
+    "test:coverage": "c8 ts-mocha --project tsconfig.test.json 'test/**/*.test.ts'"
+  },
+  "c8": {
+    "include": ["src/**/*.ts"],
+    "exclude": ["src/extension.ts", "src/test/**"],
+    "reporter": ["text", "lcov"]
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
+    "@types/mocha": "^10.0.0",
     "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
     "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.0",
+    "@vscode/test-electron": "^3.1.0",
+    "c8": "^10.0.0",
+    "mocha": "^10.0.0",
+    "ts-mocha": "^10.0.0",
     "typescript": "^5.3.0"
   }
 }
