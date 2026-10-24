@@ -103,7 +103,9 @@ Coverage excludes `*Script.ts` files (embedded PHP string constants only).
 #### Client (`client/test/`, `client/src/test/`)
 
 ```bash
-npm run test --workspace=client
+npm run test --workspace=client           # extension host integration (src/test/)
+npm run test:unit --workspace=client      # unit tests (test/)
+npm run test:coverage --workspace=client  # unit test coverage (c8, text + lcov)
 ```
 
 Uses `@vscode/test-cli` for extension host integration and plain Mocha for unit tests.

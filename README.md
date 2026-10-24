@@ -75,6 +75,19 @@ The repo is a npm workspace monorepo. The `client` package is the VS Code extens
 npm install
 ```
 
+**Update dependencies:**
+
+```sh
+npm update
+```
+
+**Run tests:**
+
+```sh
+npm run test:coverage --workspace=server
+npm run test:coverage --workspace=client
+```
+
 **Compile (one-shot):**
 
 ```sh
