@@ -24,10 +24,8 @@ import { isValidPhpExecutable } from './phpExecutable';
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
 
-// ─── Static manifest metadata ────────────────────────────────────────────────
-const _pkgPath = path.join(__dirname, '..', '..', 'package.json');
-const _pkg = JSON.parse(fs.readFileSync(_pkgPath, 'utf8')) as { homepage?: string };
-const HOMEPAGE_URL: string | undefined = _pkg.homepage;
+// ─── Static metadata ─────────────────────────────────────────────────────────
+const HOMEPAGE_URL = 'https://chevere.org/packages/workflow';
 
 // ─── Config (set on initialize) ─────────────────────────────────────────────
 let phpExecutable = 'php';
