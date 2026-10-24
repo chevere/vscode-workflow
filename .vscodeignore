@@ -5,6 +5,8 @@ server/src/**
 # Test files
 client/test/**
 server/test/**
+client/.vscode-test.js
+**/coverage/**
 
 # Source maps and type declarations (not needed at runtime)
 **/*.js.map
