@@ -13,6 +13,12 @@ VS Code extension providing complete language server support for [Chevere Workfl
 - **Graph**: Interactive Mermaid visualization of the workflow dependency graph, with zoom/pan controls, export SVG/PNG and copy-to-clipboard Mermaid source code button
 - **Stages**: Interactive lists stages (execution flow)
 
+![graph](./images/graph.avif)
+
+![stages](./images/stages.avif)
+
+![autocomplete](./images/autocomplete.avif)
+
 ## Requirements
 
 - VS Code `^1.85.0`
