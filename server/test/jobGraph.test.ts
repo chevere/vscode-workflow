@@ -194,11 +194,87 @@ describe('graphHtml — export buttons', () => {
   });
 });
 
+describe('graphHtml — themed dividers', () => {
+  const html = graphHtml('graph TB\n  A --> B', 'file:///foo.php', 1);
+
+  it('uses the editor-group border for toolbar and stage dividers before panel borders', () => {
+    const tabsBorder = '.tabs { display: flex; align-items: center; gap: 0; border-bottom: 1px solid var(--vscode-editorGroup-border, var(--vscode-editorWidget-border, var(--vscode-panel-border)))';
+    const toolbarBorder = 'border-bottom: 1px solid var(--vscode-editorGroup-border, var(--vscode-editorWidget-border, var(--vscode-panel-border)))';
+    const toolbarSeparator = '.toolbar-sep { width: 1px; height: 16px; background: var(--vscode-editorGroup-border, var(--vscode-editorWidget-border, var(--vscode-panel-border)))';
+    const stageSeparator = '.stage-item { border-top: 1px solid var(--vscode-editorGroup-border, var(--vscode-editorWidget-border, var(--vscode-panel-border)))';
+    assert.ok(html.includes(tabsBorder), 'expected tab strip divider to follow editor border styling');
+    assert.ok(html.includes(toolbarBorder), 'expected toolbar edge to follow editor border styling');
+    assert.ok(html.includes(toolbarSeparator), 'expected tool separators to follow editor border styling');
+    assert.ok(html.includes(stageSeparator), 'expected stage dividers to follow editor border styling');
+  });
+});
+
+// ─── graphHtml — Pele renderer ───────────────────────────────────────────────
+
+describe('graphHtml — Pele renderer', () => {
+  const html = graphHtml(
+    'flowchart TB\n  jobA[Job A] --> jobB[Job B]',
+    'file:///foo.php',
+    1,
+    undefined,
+    'vscode-resource:/pele.global.js'
+  );
+
+  it('loads Pele and renders the generated Mermaid source', () => {
+    assert.ok(html.includes('src="vscode-resource:/pele.global.js"'));
+    assert.ok(html.includes('pele.render(SOURCE'));
+    assert.ok(!html.includes('mermaid.render('));
+  });
+
+  it('maps active job highlighting to Pele node IDs', () => {
+    assert.ok(html.includes('.pele-node[data-id]') || html.includes("getAttribute('data-id')"));
+    assert.ok(html.includes('--pele-bg: var(--vscode-editor-background)'));
+  });
+
+  it("highlights only the active job's incoming and outgoing connections", () => {
+    assert.ok(!html.includes('adjacent-node'));
+    assert.ok(html.includes('.pele-edge[data-id]'));
+    assert.ok(html.includes('.pele-edge.current-edge'));
+    assert.ok(html.includes("edge.classList.add('current-edge')"));
+  });
+
+  it('generates valid inline JavaScript', () => {
+    const inlineScript = html.match(/<script nonce="[^"]+">([\s\S]*?)<\/script>\s*<\/body>/);
+    assert.ok(inlineScript, 'expected inline graph script');
+    assert.doesNotThrow(() => new Function(inlineScript[1]));
+  });
+
+  it('sends clicked Pele node IDs to the extension for source selection', () => {
+    assert.ok(html.includes("command: 'selectJob', jobName"));
+    assert.ok(html.includes("closest('.pele-node[data-id]')"));
+  });
+});
+
+describe('graphHtml — stage job selection', () => {
+  const html = graphHtml(
+    'flowchart TB\n  jobA[Job A]',
+    'file:///foo.php',
+    1,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    [['jobA']]
+  );
+
+  it('sends clicked stage jobs through the source selection flow', () => {
+    assert.ok(html.includes('class="stage-job" data-job="${esc(job)}"'), 'expected stage job markup');
+    assert.ok(html.includes("stagesContainer.addEventListener('click'"), 'expected stage click handler');
+    assert.ok(html.includes("command: 'selectJob', jobName"), 'expected source selection message');
+  });
+});
+
 // ─── graphHtml — CSP nonce ────────────────────────────────────────────────────
 
 describe('graphHtml — CSP nonce', () => {
   it('does not contain unsafe-inline in script-src when cspSource is provided', () => {
-    const html = graphHtml('graph TB\n  A --> B', 'file:///foo.php', 1, undefined, 'vscode-resource:/mermaid.js', undefined, 'vscode-webview:');
+    const html = graphHtml('graph TB\n  A --> B', 'file:///foo.php', 1, undefined, 'vscode-resource:/pele.global.js', undefined, 'vscode-webview:');
     const cspMatch = html.match(/Content-Security-Policy[^>]*content="([^"]+)"/);
     assert.ok(cspMatch, 'expected CSP meta tag');
     const csp = cspMatch![1];
@@ -207,7 +283,7 @@ describe('graphHtml — CSP nonce', () => {
   });
 
   it('applies the same nonce to both script tags', () => {
-    const html = graphHtml('graph TB\n  A --> B', 'file:///foo.php', 1, undefined, 'vscode-resource:/mermaid.js', undefined, 'vscode-webview:');
+    const html = graphHtml('graph TB\n  A --> B', 'file:///foo.php', 1, undefined, 'vscode-resource:/pele.global.js', undefined, 'vscode-webview:');
     const nonceMatch = html.match(/nonce="([^"]+)"/g);
     assert.ok(nonceMatch && nonceMatch.length >= 2, 'expected nonce on both script tags');
     const values = nonceMatch!.map(m => m.replace(/nonce="|"/g, ''));
@@ -274,6 +350,14 @@ describe('graphHtml — stages tab', () => {
     const html = graphHtml('graph TB\n  A --> B', 'file:///foo.php', 1, undefined, undefined, undefined, undefined, undefined, stages);
     assert.ok(html.includes('stage-jobs'), 'expected stage-jobs class');
     assert.ok(html.includes('stage-job'), 'expected stage-job class');
+  });
+
+  it('styles stage job boxes with the Pele theme tokens', () => {
+    const stages = [['job1']];
+    const html = graphHtml('graph TB\n  A --> B', 'file:///foo.php', 1, undefined, undefined, undefined, undefined, undefined, stages);
+    assert.ok(html.includes('--pele-surface: var(--vscode-editorWidget-background'));
+    assert.ok(html.includes('background: var(--pele-surface); color: var(--pele-fg); border: 1px solid var(--pele-border)'));
+    assert.ok(!html.includes('#ECECFF'));
   });
 });
 

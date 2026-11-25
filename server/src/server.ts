@@ -156,13 +156,13 @@ connection.onRequest('chevereWorkflow/jobPositions', (params: { uri: string }) =
 });
 
 // ─── Custom request: job graph ────────────────────────────────────────────────
-connection.onRequest('chevereWorkflow/jobGraph', async (params: { uri: string; offset?: number; mermaidScriptUri?: string; codiconCssUri?: string; cspSource?: string }) => {
+connection.onRequest('chevereWorkflow/jobGraph', async (params: { uri: string; offset?: number; peleScriptUri?: string; codiconCssUri?: string; cspSource?: string }) => {
   const document = documents.get(params.uri);
   if (!document) return null;
   const parsed = getParsed(document);
   const config = {
     ...getConfig(),
-    mermaidScriptUri: params.mermaidScriptUri,
+    peleScriptUri: params.peleScriptUri,
     codiconCssUri: params.codiconCssUri,
     cspSource: params.cspSource,
   };

@@ -11,8 +11,8 @@ import {
 
 let client: LanguageClient;
 
-// Tracks open graph panels: file URI string → { panel, offset, mermaidWebviewUri, codiconCssUri, cspSource }
-const graphPanels = new Map<string, { panel: vscode.WebviewPanel; offset: number; mermaidWebviewUri: string; codiconCssUri: string; cspSource: string }>();
+// Tracks open graph panels: file URI string → { panel, offset, peleWebviewUri, codiconCssUri, cspSource }
+const graphPanels = new Map<string, { panel: vscode.WebviewPanel; offset: number; peleWebviewUri: string; codiconCssUri: string; cspSource: string }>();
 const DEBOUNCE_MS = 600;
 const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -76,7 +76,7 @@ async function refreshPanel(uriString: string, offset: number): Promise<void> {
   const result = await client.sendRequest('chevereWorkflow/jobGraph', {
     uri: uriString,
     offset,
-    mermaidScriptUri: entry.mermaidWebviewUri,
+    peleScriptUri: entry.peleWebviewUri,
     codiconCssUri: entry.codiconCssUri,
     cspSource: entry.cspSource,
   });
@@ -100,9 +100,9 @@ export function activate(context: vscode.ExtensionContext) {
     },
   };
 
-  const mermaidDistPath = context.asAbsolutePath(path.join('dist', 'vendor'));
-  const mermaidScriptDiskPath = vscode.Uri.file(
-    path.join(mermaidDistPath, 'mermaid.min.js')
+  const peleDistPath = context.asAbsolutePath(path.join('dist', 'vendor'));
+  const peleScriptDiskPath = vscode.Uri.file(
+    path.join(peleDistPath, 'pele.global.js')
   );
   const codiconDistPath = context.asAbsolutePath(path.join('dist', 'vendor', 'codicons'));
   const codiconCssDiskPath = vscode.Uri.file(
@@ -225,25 +225,25 @@ export function activate(context: vscode.ExtensionContext) {
           vscode.ViewColumn.Beside,
           {
             enableScripts: true,
-            localResourceRoots: [vscode.Uri.file(mermaidDistPath), vscode.Uri.file(codiconDistPath)],
+            localResourceRoots: [vscode.Uri.file(peleDistPath), vscode.Uri.file(codiconDistPath)],
           }
         );
 
-        // Resolve the mermaid script URI and CSP source in the context of this webview
-        const mermaidWebviewUri = panel.webview.asWebviewUri(mermaidScriptDiskPath).toString();
+        // Resolve the Pele script URI and CSP source in the context of this webview
+        const peleWebviewUri = panel.webview.asWebviewUri(peleScriptDiskPath).toString();
         const codiconCssUri = panel.webview.asWebviewUri(codiconCssDiskPath).toString();
         const cspSource = panel.webview.cspSource;
 
         const result = await client.sendRequest('chevereWorkflow/jobGraph', {
           uri: uriString,
           offset,
-          mermaidScriptUri: mermaidWebviewUri,
+          peleScriptUri: peleWebviewUri,
           codiconCssUri,
           cspSource,
         });
         if (result) {
           panel.webview.html = result as string;
-          graphPanels.set(uriString, { panel, offset, mermaidWebviewUri, codiconCssUri, cspSource });
+          graphPanels.set(uriString, { panel, offset, peleWebviewUri, codiconCssUri, cspSource });
           await highlightPanelAtOffset(uriString, offset);
 
           panel.onDidDispose(() => {
@@ -271,6 +271,35 @@ export function activate(context: vscode.ExtensionContext) {
                 preserveFocus: false,
                 viewColumn: existingEditor?.viewColumn,
               });
+            } else if (msg.command === 'selectJob') {
+              if (typeof msg.jobName !== 'string') return;
+              const jobs = await client.sendRequest<{ name: string; start: number; end: number }[]>(
+                'chevereWorkflow/jobPositions',
+                { uri: uriString }
+              );
+              const matchingJobs = jobs.filter(job => job.name === msg.jobName);
+              if (matchingJobs.length === 0) return;
+              const activeEntry = graphPanels.get(uriString);
+              if (!activeEntry) return;
+              const target = matchingJobs.reduce((closest, job) =>
+                Math.abs(job.start - activeEntry.offset) < Math.abs(closest.start - activeEntry.offset)
+                  ? job
+                  : closest
+              );
+              const targetDoc = await vscode.workspace.openTextDocument(vscode.Uri.parse(uriString));
+              const position = targetDoc.positionAt(target.start);
+              const existingEditor = vscode.window.visibleTextEditors.find(
+                e => e.document.uri.toString() === uriString
+              );
+              const editor = await vscode.window.showTextDocument(targetDoc, {
+                selection: new vscode.Range(position, position),
+                preserveFocus: false,
+                viewColumn: existingEditor?.viewColumn,
+              });
+              editor.revealRange(
+                new vscode.Range(position, position),
+                vscode.TextEditorRevealType.InCenter
+              );
             } else if (msg.command === 'exportSvg' || msg.command === 'exportPng') {
               const isSvg = msg.command === 'exportSvg';
               // PNG canvas rendering may fall back to raw SVG bytes if toDataURL fails

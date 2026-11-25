@@ -10,7 +10,7 @@ VS Code extension providing complete language server support for [Chevere Workfl
 - **Inlay hints**: Shows parameter types before argument values and return types after `response()` calls
 - **Hover**: Displays full method signatures with parameter types, defaults, and required/optional status; hovering over `variable('name')` shows the variable's schema
 - **Completion**: Suggests available parameter names (required first) with snippet expansion; offers `response()` references to other jobs in the workflow
-- **Graph**: Interactive Mermaid visualization of the workflow dependency graph, with zoom/pan controls, export SVG/PNG and copy-to-clipboard Mermaid source code button
+- **Graph**: Interactive Pele-rendered visualization of the workflow dependency graph (Mermaid syntax), with zoom/pan controls, export SVG/PNG and copy-to-clipboard source button
 - **Stages**: Interactive lists stages (execution flow)
 
 ![graph](./images/graph.avif)
@@ -68,7 +68,7 @@ vscode-workflow/
     ├── lintScript.ts            # Embedded PHP linter script
     ├── phpExecutable.ts         # PHP executable sanitization/validation
     ├── tempDir.ts               # Per-process private temp directory
-    └── jobGraph.ts              # Workflow graph (Mermaid)
+    └── jobGraph.ts              # Workflow graph (Pele renderer)
 ```
 
 The repo is a npm workspace monorepo. The `client` package is the VS Code extension; the `server` package is the language server connected via Node.js IPC.

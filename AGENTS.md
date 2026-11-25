@@ -39,7 +39,7 @@ chevere/vscode-workflow/
         └── tempDir.ts         # Per-process private temp dir (CWE-377 safe, mode 0700)
 ```
 
-**Build outputs:** `client/out/` and `server/out/` (git-ignored). Vendor assets (Mermaid, Codicons) copied to `dist/vendor/`.
+**Build outputs:** `client/out/` and `server/out/` (git-ignored). Vendor assets (Pele, Codicons) copied to `dist/vendor/`.
 
 ## Tech Stack
 
@@ -50,7 +50,7 @@ chevere/vscode-workflow/
 | LSP             | `vscode-languageserver` / `vscode-languageclient` v9 |
 | PHP AST         | `php-parser` v3.1 (Glayzzle)                         |
 | PHP reflection  | PHP subprocess (configurable executable)             |
-| Graph rendering | Mermaid v11 (local WebView asset)                    |
+| Graph rendering | Pele (local WebView asset; renders Mermaid syntax)   |
 | Packaging       | `@vscode/vsce`                                       |
 | Target VS Code  | `^1.85.0`                                            |
 | Build           | `esbuild` (`esbuild.js`)                             |
@@ -125,7 +125,7 @@ Uses `@vscode/test-cli` for extension host integration and plain Mocha for unit 
 
 | ID                                | Label                    | Description                              |
 | --------------------------------- | ------------------------ | ---------------------------------------- |
-| `chevereWorkflow.showJobGraph`    | Show Job Graph           | Opens Mermaid visualization              |
+| `chevereWorkflow.showJobGraph`    | Show Job Graph           | Opens Pele-rendered workflow visualization |
 | `chevereWorkflow.restartServer`   | Restart Server           | Restarts the LSP server                  |
 | `chevereWorkflow.installWorkflow` | Install chevere/workflow | Runs `composer require chevere/workflow` |
 

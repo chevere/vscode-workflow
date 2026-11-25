@@ -11,7 +11,7 @@ export interface GraphConfig {
   phpExecutable: string;
   autoloaderPath: string;
   homepageUrl?: string;
-  mermaidScriptUri?: string;
+  peleScriptUri?: string;
   codiconCssUri?: string;
   cspSource?: string;
 }
@@ -184,7 +184,7 @@ export async function buildJobGraphHtml(
     }
     const sourceLine = cursorOffset !== undefined ? lineFromOffset(parsed.source, cursorOffset) : 1;
     const exportBaseName = parsed.workflowClassName?.split('\\').pop();
-    return graphHtml(result.mermaid, sourceUri, sourceLine, config.homepageUrl, config.mermaidScriptUri, config.codiconCssUri, config.cspSource, exportBaseName, result.stages);
+    return graphHtml(result.mermaid, sourceUri, sourceLine, config.homepageUrl, config.peleScriptUri, config.codiconCssUri, config.cspSource, exportBaseName, result.stages);
   }
 
   // Fallback: extract the real workflow() expression from source and execute it via PHP
@@ -211,7 +211,7 @@ export async function buildJobGraphHtml(
       const detail = result.error.length > 500 ? result.error.slice(0, 500) + '…' : result.error;
       return errorHtml('Failed to generate graph.', escapeHtml(detail));
     }
-    return graphHtml(result.mermaid, sourceUri, sourceLine, config.homepageUrl, config.mermaidScriptUri, config.codiconCssUri, config.cspSource);
+    return graphHtml(result.mermaid, sourceUri, sourceLine, config.homepageUrl, config.peleScriptUri, config.codiconCssUri, config.cspSource);
   }
 
   return errorHtml('No workflow found. Make sure the active file contains a <code>workflow()</code> call.');
@@ -253,7 +253,7 @@ export function errorHtml(message: string, detail?: string): string {
 </html>`;
 }
 
-export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number, homepageUrl?: string, mermaidScriptUri?: string, codiconCssUri?: string, cspSource?: string, exportBaseName?: string, stages?: string[][]): string {
+export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number, homepageUrl?: string, peleScriptUri?: string, codiconCssUri?: string, cspSource?: string, exportBaseName?: string, stages?: string[][]): string {
   // Safely embed the mermaid source as a JS string
   const jsLiteral = JSON.stringify(mermaid);
   const uriLiteral = JSON.stringify(sourceUri);
@@ -262,7 +262,7 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
   const stagesLiteral = JSON.stringify(stages ?? null);
   const fileName = sourceUri.split('/').pop() ?? sourceUri;
   const nonce = randomBytes(16).toString('base64');
-  const mermaidSrc = mermaidScriptUri ?? '';
+  const peleSrc = peleScriptUri ?? '';
   const codiconLink = codiconCssUri ? `\n  <link rel="stylesheet" href="${codiconCssUri}">` : '';
   const cspTag = cspSource
     ? `\n  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}' ${cspSource}; style-src 'unsafe-inline' ${cspSource}; font-src ${cspSource}; img-src data: blob:;">`
@@ -274,10 +274,27 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
   <meta charset="UTF-8">${cspTag}${codiconLink}
   <style>
     *, *::before, *::after { box-sizing: border-box; }
-    body { margin: 0; background: var(--vscode-editor-background); color: var(--vscode-editor-foreground); font-family: var(--vscode-editor-font-family, ui-monospace, monospace); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    body {
+      margin: 0;
+      background: var(--vscode-editor-background);
+      color: var(--vscode-editor-foreground);
+      font-family: var(--vscode-editor-font-family, ui-monospace, monospace);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      --pele-bg: var(--vscode-editor-background);
+      --pele-fg: var(--vscode-editor-foreground);
+      --pele-muted: var(--vscode-descriptionForeground);
+      --pele-line: var(--vscode-editor-foreground);
+      --pele-surface: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+      --pele-surface-alt: var(--vscode-editor-selectionBackground, var(--vscode-editor-background));
+      --pele-border: var(--vscode-panel-border, var(--vscode-editor-foreground));
+      --pele-accent: var(--vscode-focusBorder);
+    }
 
     /* ── Tabs ── */
-    .tabs { display: flex; align-items: center; gap: 0; border-bottom: 1px solid var(--vscode-panel-border, var(--vscode-editorGroup-border, var(--vscode-editorWidget-border))); flex-shrink: 0; }
+    .tabs { display: flex; align-items: center; gap: 0; border-bottom: 1px solid var(--vscode-editorGroup-border, var(--vscode-editorWidget-border, var(--vscode-panel-border))); flex-shrink: 0; }
     .tab { padding: 8px 20px; font-size: 12px; cursor: pointer; color: var(--vscode-tab-inactiveForeground, var(--vscode-descriptionForeground)); border-bottom: 2px solid transparent; background: none; border-top: none; border-left: none; border-right: none; }
     .tab:hover { color: var(--vscode-tab-activeForeground, var(--vscode-editor-foreground)); }
     .tab.active { color: var(--vscode-tab-activeForeground, var(--vscode-editor-foreground)); border-bottom-color: var(--vscode-focusBorder); }
@@ -287,13 +304,13 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
     .tabs-logo:focus-visible { outline: 1px solid var(--vscode-focusBorder); }
 
     /* ── Toolbar ── */
-    .toolbar { display: flex; align-items: center; gap: 0; padding: 0 0; background: var(--vscode-editor-background); border-bottom: 1px solid var(--vscode-panel-border, var(--vscode-editorGroup-border, var(--vscode-editorWidget-border))); flex-shrink: 0; height: 28px; }
+    .toolbar { display: flex; align-items: center; gap: 0; padding: 0 0; background: var(--vscode-editor-background); border-bottom: 1px solid var(--vscode-editorGroup-border, var(--vscode-editorWidget-border, var(--vscode-panel-border))); flex-shrink: 0; height: 28px; }
     .toolbar button { background: transparent; border: none; color: var(--vscode-icon-foreground, var(--vscode-editor-foreground)); border-radius: 0; padding: 0; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
     .toolbar button:hover { background: var(--vscode-toolbar-hoverBackground); }
     .toolbar button:active { background: var(--vscode-toolbar-activeBackground); }
     .toolbar button.text-btn { width: auto; padding: 2px 6px; font-size: 11px; font-family: var(--vscode-font-family, sans-serif); color: var(--vscode-descriptionForeground); }
     .toolbar button.text-btn:hover { color: var(--vscode-editor-foreground); }
-    .toolbar-sep { width: 1px; height: 16px; background: var(--vscode-panel-border, var(--vscode-editorGroup-border)); margin: 0 4px; flex-shrink: 0; }
+    .toolbar-sep { width: 1px; height: 16px; background: var(--vscode-editorGroup-border, var(--vscode-editorWidget-border, var(--vscode-panel-border))); margin: 0 4px; flex-shrink: 0; }
     .toolbar-spacer { flex: 1; }
     .zoom-label { font-size: 11px; font-family: var(--vscode-font-family, sans-serif); color: var(--vscode-descriptionForeground); min-width: 38px; text-align: center; }
 
@@ -306,11 +323,17 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
     #graph-viewport { width: 100%; height: 100%; overflow: hidden; cursor: grab; }
     #graph-viewport:active { cursor: grabbing; }
     #graph-canvas { transform-origin: 0 0; display: inline-block; }
-    #graph-canvas .mermaid svg { display: block; }
+    #diagram .pele { display: block; }
+    #diagram .pele-node { cursor: pointer; }
+    #diagram.render-error {
+      padding: 16px;
+      color: var(--vscode-errorForeground);
+      white-space: pre-wrap;
+    }
 
     /* ── Stages panel ── */
     #stages-panel { flex-direction: column; }
-    #stages-toolbar { display: none; align-items: center; justify-content: flex-end; gap: 0; padding: 2px 0; background: var(--vscode-editor-background); border-bottom: 1px solid var(--vscode-panel-border, var(--vscode-editorGroup-border, var(--vscode-editorWidget-border))); flex-shrink: 0; height: 28px; }
+    #stages-toolbar { display: none; align-items: center; justify-content: flex-end; gap: 0; padding: 2px 0; background: var(--vscode-editor-background); border-bottom: 1px solid var(--vscode-editorGroup-border, var(--vscode-editorWidget-border, var(--vscode-panel-border))); flex-shrink: 0; height: 28px; }
     #stages-toolbar button { background: transparent; border: none; color: var(--vscode-icon-foreground, var(--vscode-editor-foreground)); border-radius: 0; padding: 0; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
     #stages-toolbar button.text-btn { width: auto; padding: 2px 6px; font-size: 11px; font-family: var(--vscode-font-family, sans-serif); color: var(--vscode-descriptionForeground); }
     #stages-toolbar button.text-btn:hover { color: var(--vscode-editor-foreground); }
@@ -318,23 +341,28 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
     #stages-toolbar button:active { background: var(--vscode-toolbar-activeBackground); }
     #stages-content { overflow: auto; flex: 1; padding: 0; }
     .stage-item:first-child { border-top: 0; }
-    .stage-item { border-top: 1px solid var(--vscode-panel-border, var(--vscode-editorGroup-border, var(--vscode-editorWidget-border))); padding: 24px 0; }
+    .stage-item { border-top: 1px solid var(--vscode-editorGroup-border, var(--vscode-editorWidget-border, var(--vscode-panel-border))); padding: 24px 0; }
     .stage-jobs { display: flex; flex-wrap: wrap; gap: 8px; }
-    .stage-job { padding: 8px 16px; background: #ECECFF; color: #000; border: 1px solid #9370DB; border-radius: 4px; font-size: 13px; font-family: var(--vscode-editor-font-family, ui-monospace, monospace); font-weight: 400; }
-    .vscode-dark .stage-job { background: #1f2020; color: #fff; border-color: #555; }
-    .vscode-high-contrast .stage-job, .vscode-high-contrast-light .stage-job { background: #f2f2f2; color: #000; border: 2px solid #000; }
-    .vscode-high-contrast .stage-job { background: #1f1f1f; color: #fff; border-color: #fff; }
+    .stage-job { padding: 8px 16px; background: var(--pele-surface); color: var(--pele-fg); border: 1px solid var(--pele-border); border-radius: 4px; font-size: 13px; font-family: var(--vscode-editor-font-family, ui-monospace, monospace); font-weight: 400; cursor: pointer; }
     .stage-empty { color: var(--vscode-descriptionForeground); font-style: italic; font-size: 12px; }
 
 
     /* ── Active job node highlight ── */
-    #diagram .node.current-node > rect,
-    #diagram .node.current-node > polygon,
-    #diagram .node.current-node > circle,
-    #diagram .node.current-node > ellipse {
+    #diagram .pele-node.current-node > rect,
+    #diagram .pele-node.current-node > polygon,
+    #diagram .pele-node.current-node > circle,
+    #diagram .pele-node.current-node > ellipse {
       stroke: var(--vscode-focusBorder) !important;
       stroke-width: 1px !important;
       fill: var(--vscode-editor-selectionBackground) !important;
+    }
+
+    #diagram .pele-edge.current-edge {
+      stroke: var(--vscode-focusBorder) !important;
+      stroke-width: 1px !important;
+    }
+    #diagram .pele-edge.current-edge .pele-marker {
+      fill: var(--vscode-focusBorder) !important;
     }
 
     /* ── Active stage job highlight ── */
@@ -382,7 +410,7 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
 <div class="panel active" id="graph-panel">
   <div id="graph-viewport">
     <div id="graph-canvas">
-      <div class="mermaid" id="diagram"></div>
+      <div id="diagram"></div>
     </div>
   </div>
 </div>
@@ -402,7 +430,7 @@ ${stages ? `
   </div>
 </div>` : ''}
 
-<script nonce="${nonce}" src="${mermaidSrc}"></script>
+<script nonce="${nonce}" src="${peleSrc}"></script>
 <script nonce="${nonce}">
 (function () {
   const SOURCE = ${jsLiteral};
@@ -488,6 +516,12 @@ ${stages ? `
     const btnCopyStages = document.getElementById('btn-copy-stages');
     const iconCopyStages = document.getElementById('icon-copy-stages');
     const iconCheckStages = document.getElementById('icon-check-stages');
+    stagesContainer.addEventListener('click', event => {
+      const target = event.target;
+      const job = target instanceof Element ? target.closest('.stage-job[data-job]') : null;
+      const jobName = job?.getAttribute('data-job');
+      if (jobName && vscodeApi) vscodeApi.postMessage({ command: 'selectJob', jobName });
+    });
     btnCopyStages.addEventListener('click', () => {
       navigator.clipboard.writeText(JSON.stringify(STAGES, null, 2)).then(() => {
         iconCopyStages.style.display = 'none';
@@ -522,7 +556,8 @@ ${stages ? `
   const zoomLabel = document.getElementById('zoom-label');
 
   let scale = 1, tx = 0, ty = 0;
-  let dragging = false, startX = 0, startY = 0, startTx = 0, startTy = 0;
+  let dragging = false, dragged = false, suppressNodeClick = false;
+  let startX = 0, startY = 0, startTx = 0, startTy = 0;
 
   function applyTransform() {
     canvas.style.transform = \`translate(\${tx}px, \${ty}px) scale(\${scale})\`;
@@ -569,28 +604,37 @@ ${stages ? `
     persistGraphView();
   }
 
-  // ── Render mermaid ───────────────────────────────────────────────────────
-  function getMermaidTheme() {
-    const cl = document.body.classList;
-    if (cl.contains('vscode-high-contrast-light')) return 'neutral';
-    if (cl.contains('vscode-high-contrast'))       return 'neutral';
-    if (cl.contains('vscode-light'))               return 'default';
-    return 'dark';
-  }
-
+  // ── Render Pele ──────────────────────────────────────────────────────────
   let activeJobName = null;
   function applyHighlight() {
-    document.querySelectorAll('#diagram .node').forEach(node => {
+    document.querySelectorAll('#diagram .pele-node').forEach(node => {
       node.classList.remove('current-node');
+    });
+    document.querySelectorAll('#diagram .pele-edge').forEach(edge => {
+      edge.classList.remove('current-edge');
     });
     document.querySelectorAll('.stage-job').forEach(job => {
       job.classList.remove('current-job');
     });
     if (!activeJobName) return;
-    // Highlight graph nodes
-    const prefix = 'flowchart-' + activeJobName + '-';
-    document.querySelectorAll('#diagram .node').forEach(node => {
-      if (node.id.startsWith(prefix)) node.classList.add('current-node');
+    // Pele preserves Mermaid node IDs in each node's data-id attribute.
+    document.querySelectorAll('#diagram .pele-node').forEach(node => {
+      if (node.getAttribute('data-id') === activeJobName) node.classList.add('current-node');
+    });
+    const nodes = Array.from(document.querySelectorAll('#diagram .pele-node[data-id]'));
+    const nodeIds = nodes
+      .map(node => node.getAttribute('data-id'))
+      .filter(id => id !== null);
+    document.querySelectorAll('#diagram .pele-edge[data-id]').forEach(edge => {
+      const edgeId = edge.getAttribute('data-id');
+      if (!edgeId || !edgeId.startsWith('L_')) return;
+      const route = edgeId.slice(2).replace(/_\\d+$/, '');
+      for (const source of nodeIds) {
+        for (const target of nodeIds) {
+          if (route !== source + '_' + target || (source !== activeJobName && target !== activeJobName)) continue;
+          edge.classList.add('current-edge');
+        }
+      }
     });
     // Highlight stage jobs
     document.querySelectorAll('.stage-job').forEach(job => {
@@ -598,19 +642,24 @@ ${stages ? `
     });
   }
 
-  let renderCount = 0;
   function renderDiagram() {
-    const id = 'mermaid-svg-' + (++renderCount);
-    mermaid.initialize({ startOnLoad: false, theme: getMermaidTheme(), flowchart: { curve: 'basis' } });
-    mermaid.render(id, SOURCE).then(({ svg }) => {
+    const container = document.getElementById('diagram');
+    try {
+      const { svg } = pele.render(SOURCE, { links: false, images: false });
       const parser = new DOMParser();
       const doc = parser.parseFromString(svg, 'text/html');
-      const svgNode = document.adoptNode(doc.querySelector('svg'));
-      const container = document.getElementById('diagram');
-      container.replaceChildren(svgNode);
+      const svgNode = doc.querySelector('svg');
+      if (!svgNode) throw new Error('Pele did not return an SVG diagram.');
+      container.classList.remove('render-error');
+      const adoptedSvg = document.adoptNode(svgNode);
+      container.replaceChildren(adoptedSvg);
       applyHighlight();
       requestAnimationFrame(() => requestAnimationFrame(restoreGraphViewOrFit));
-    });
+    } catch (error) {
+      if (!(error instanceof pele.PeleError)) throw error;
+      container.classList.add('render-error');
+      container.textContent = error.message;
+    }
   }
 
   renderDiagram();
@@ -679,10 +728,13 @@ ${stages ? `
 
   viewport.addEventListener('mousedown', e => {
     if (e.button !== 0) return;
+    suppressNodeClick = false;
+    dragged = false;
     dragging = true; startX = e.clientX; startY = e.clientY; startTx = tx; startTy = ty;
   });
   window.addEventListener('mousemove', e => {
     if (!dragging) return;
+    if (Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY) > 3) dragged = true;
     tx = startTx + e.clientX - startX;
     ty = startTy + e.clientY - startY;
     applyTransform();
@@ -690,7 +742,19 @@ ${stages ? `
   window.addEventListener('mouseup', () => {
     if (!dragging) return;
     dragging = false;
+    suppressNodeClick = dragged;
     persistGraphView();
+  });
+
+  document.getElementById('diagram').addEventListener('click', event => {
+    if (suppressNodeClick) {
+      suppressNodeClick = false;
+      return;
+    }
+    const target = event.target;
+    const node = target instanceof Element ? target.closest('.pele-node[data-id]') : null;
+    const jobName = node?.getAttribute('data-id');
+    if (jobName && vscodeApi) vscodeApi.postMessage({ command: 'selectJob', jobName });
   });
 
   document.getElementById('btn-zoom-in').addEventListener('click',  () => { scale *= 1.2; applyTransform(); persistGraphView(); });

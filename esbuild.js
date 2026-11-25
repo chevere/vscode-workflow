@@ -23,10 +23,10 @@ function copyVendorAssets() {
   const codiconsDir = path.join(vendorDir, 'codicons');
   fs.mkdirSync(codiconsDir, { recursive: true });
 
-  // mermaid — loaded as a WebView static asset, not bundled
+  // Pele — loaded as a WebView static asset, not bundled
   fs.copyFileSync(
-    path.join(__dirname, 'node_modules', 'mermaid', 'dist', 'mermaid.min.js'),
-    path.join(vendorDir, 'mermaid.min.js')
+    path.join(__dirname, 'node_modules', 'pele', 'dist', 'pele.global.js'),
+    path.join(vendorDir, 'pele.global.js')
   );
 
   // codicons — CSS + font required by WebView
