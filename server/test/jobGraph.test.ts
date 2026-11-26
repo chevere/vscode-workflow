@@ -222,7 +222,7 @@ describe('graphHtml — Pele renderer', () => {
 
   it('loads Pele and renders the generated Mermaid source', () => {
     assert.ok(html.includes('src="vscode-resource:/pele.global.js"'));
-    assert.ok(html.includes('pele.render(SOURCE'));
+    assert.ok(html.includes("pele.render(SOURCE, { links: false, images: false, config: { flowchart: { curve: 'step' } } })"));
     assert.ok(!html.includes('mermaid.render('));
   });
 
@@ -236,6 +236,20 @@ describe('graphHtml — Pele renderer', () => {
     assert.ok(html.includes('.pele-edge[data-id]'));
     assert.ok(html.includes('.pele-edge.current-edge'));
     assert.ok(html.includes("edge.classList.add('current-edge')"));
+  });
+
+  it('distinguishes active nodes and connections with the chart accent and thicker strokes', () => {
+    const accent = 'var(--vscode-charts-blue)';
+    assert.ok(html.includes(`.pele-node.current-node > ellipse {\n      stroke: ${accent} !important;\n      stroke-width: 2px !important;`));
+    assert.ok(html.includes(`.pele-edge.current-edge {\n      stroke: ${accent} !important;\n      stroke-width: 2px !important;`));
+    assert.ok(html.includes(`.pele-edge.current-edge .pele-marker {\n      fill: ${accent} !important;`));
+    assert.ok(html.includes(`.stage-job.current-job {\n      border-color: ${accent} !important;`));
+  });
+
+  it('uses the selection foreground for active graph and stage labels, falling back to editor text', () => {
+    const foreground = 'var(--vscode-editor-selectionForeground, var(--vscode-editor-foreground))';
+    assert.ok(html.includes(`.pele-node.current-node > text {\n      fill: ${foreground} !important;`));
+    assert.ok(html.includes(`background: var(--vscode-editor-selectionBackground) !important;\n      color: ${foreground} !important;`));
   });
 
   it('generates valid inline JavaScript', () => {
@@ -262,6 +276,10 @@ describe('graphHtml — stage job selection', () => {
     undefined,
     [['jobA']]
   );
+
+  it('disables text selection throughout the graph webview', () => {
+    assert.match(html, /body \{[^}]*user-select: none;/);
+  });
 
   it('sends clicked stage jobs through the source selection flow', () => {
     assert.ok(html.includes('class="stage-job" data-job="${esc(job)}"'), 'expected stage job markup');

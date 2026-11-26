@@ -15,6 +15,7 @@ import { AttrInfo, ClassSignature, ParamInfo } from './reflector';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const PhpParser = require('php-parser') as new (opts: unknown) => {
   parseCode(source: string, filename: string): unknown;
+  tokenGetAll(source: string): (string | [string, string, number])[];
 };
 
 // ─── Shared engine instance ──────────────────────────────────────────────────
@@ -82,6 +83,8 @@ export interface JobCall {
   args: JobCallArg[];
   callStart: number;
   callEnd: number;
+  /** Character offset immediately after the call's opening parenthesis. */
+  argumentsStart: number;
   jobName?: string;
   /** FQCN of the class containing the workflow() call, if determinable. */
   enclosingClass?: string;
@@ -320,6 +323,18 @@ function parseWorkflowCall(
     const callArgs: any[] = callNode.arguments ?? [];
     if (callArgs.length === 0) continue;
 
+    const nameEnd: number = callNode.what.loc.end.offset;
+    const prefix = '<?php ';
+    const tokens = engine.tokenGetAll(prefix + source.slice(nameEnd, callArgs[0].loc.start.offset));
+    let argumentsStart = nameEnd - prefix.length;
+    for (const token of tokens) {
+      argumentsStart += typeof token === 'string' ? token.length : token[1].length;
+      if (token === '(') break;
+    }
+    if (source[argumentsStart - 1] !== '(') {
+      throw new Error('Unable to locate the job call opening parenthesis');
+    }
+
     const { className: resolvedClass, methodName } = resolveCallable(callArgs[0], useMap, enclosingClass);
     const className = resolvedClass ?? '<closure>';
     const closureSignature = className === '<closure>'
@@ -365,6 +380,7 @@ function parseWorkflowCall(
         args: jobArgs,
         callStart: callNode.loc.start.offset,
         callEnd: callNode.loc.end.offset,
+        argumentsStart,
         jobName,
         enclosingClass: enclosingClass ?? undefined,
         chainMethodArgs: collectedChainArgs.length > 0 ? collectedChainArgs : undefined,

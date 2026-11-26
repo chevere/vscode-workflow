@@ -83,6 +83,21 @@ describe('parseDocument — basic workflow() detection', () => {
     assert.ok(call.callEnd <= src.length);
   });
 
+  it('records the position immediately after each job call opening parenthesis', () => {
+    const src = phpW(`// 😀
+$w = workflow(
+  first: sync /* ignored ( */ (
+    new JobA()
+  )->withDepends('other'),
+  second: async( /* ignored ( */ JobB::class)
+);`);
+    const jobs = parseDocument(src).workflowCalls[0].jobs;
+    assert.strictEqual(jobs.length, 2);
+    assert.strictEqual(jobs[0].call.argumentsStart, src.indexOf('(\n    new JobA') + 1);
+    assert.strictEqual(jobs[1].call.argumentsStart, src.indexOf('async(') + 'async('.length);
+    assert.strictEqual(src.slice(jobs[0].call.callStart, jobs[0].call.argumentsStart), 'sync /* ignored ( */ (');
+  });
+
   it('detects fully-qualified \\Chevere\\Workflow\\workflow() call via name resolution', () => {
     // php-parser resolves \Chevere\Workflow\workflow to name node 'Chevere\Workflow\workflow'
     // which matches the isWorkflow check in walkNode

@@ -11,6 +11,13 @@ import {
 
 let client: LanguageClient;
 
+interface JobPosition {
+  name: string;
+  start: number;
+  end: number;
+  argumentsStart: number;
+}
+
 // Tracks open graph panels: file URI string → { panel, offset, peleWebviewUri, codiconCssUri, cspSource }
 const graphPanels = new Map<string, { panel: vscode.WebviewPanel; offset: number; peleWebviewUri: string; codiconCssUri: string; cspSource: string }>();
 const DEBOUNCE_MS = 600;
@@ -28,7 +35,7 @@ async function highlightPanelAtOffset(uriString: string, offset: number): Promis
   const entry = graphPanels.get(uriString);
   if (!entry) return;
 
-  const jobs = await client.sendRequest<{ name: string; start: number; end: number }[]>(
+  const jobs = await client.sendRequest<JobPosition[]>(
     'chevereWorkflow/jobPositions',
     { uri: uriString }
   );
@@ -228,6 +235,10 @@ export function activate(context: vscode.ExtensionContext) {
             localResourceRoots: [vscode.Uri.file(peleDistPath), vscode.Uri.file(codiconDistPath)],
           }
         );
+        panel.iconPath = {
+          light: vscode.Uri.file(path.join(codiconDistPath, 'type-hierarchy-light.svg')),
+          dark: vscode.Uri.file(path.join(codiconDistPath, 'type-hierarchy-dark.svg')),
+        };
 
         // Resolve the Pele script URI and CSP source in the context of this webview
         const peleWebviewUri = panel.webview.asWebviewUri(peleScriptDiskPath).toString();
@@ -273,7 +284,7 @@ export function activate(context: vscode.ExtensionContext) {
               });
             } else if (msg.command === 'selectJob') {
               if (typeof msg.jobName !== 'string') return;
-              const jobs = await client.sendRequest<{ name: string; start: number; end: number }[]>(
+              const jobs = await client.sendRequest<JobPosition[]>(
                 'chevereWorkflow/jobPositions',
                 { uri: uriString }
               );
@@ -287,7 +298,7 @@ export function activate(context: vscode.ExtensionContext) {
                   : closest
               );
               const targetDoc = await vscode.workspace.openTextDocument(vscode.Uri.parse(uriString));
-              const position = targetDoc.positionAt(target.start);
+              const position = targetDoc.positionAt(target.argumentsStart);
               const existingEditor = vscode.window.visibleTextEditors.find(
                 e => e.document.uri.toString() === uriString
               );

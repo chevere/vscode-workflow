@@ -283,6 +283,7 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
       flex-direction: column;
       height: 100vh;
       overflow: hidden;
+      user-select: none;
       --pele-bg: var(--vscode-editor-background);
       --pele-fg: var(--vscode-editor-foreground);
       --pele-muted: var(--vscode-descriptionForeground);
@@ -352,23 +353,27 @@ export function graphHtml(mermaid: string, sourceUri: string, sourceLine: number
     #diagram .pele-node.current-node > polygon,
     #diagram .pele-node.current-node > circle,
     #diagram .pele-node.current-node > ellipse {
-      stroke: var(--vscode-focusBorder) !important;
-      stroke-width: 1px !important;
+      stroke: var(--vscode-charts-blue) !important;
+      stroke-width: 2px !important;
       fill: var(--vscode-editor-selectionBackground) !important;
+    }
+    #diagram .pele-node.current-node > text {
+      fill: var(--vscode-editor-selectionForeground, var(--vscode-editor-foreground)) !important;
     }
 
     #diagram .pele-edge.current-edge {
-      stroke: var(--vscode-focusBorder) !important;
-      stroke-width: 1px !important;
+      stroke: var(--vscode-charts-blue) !important;
+      stroke-width: 2px !important;
     }
     #diagram .pele-edge.current-edge .pele-marker {
-      fill: var(--vscode-focusBorder) !important;
+      fill: var(--vscode-charts-blue) !important;
     }
 
     /* ── Active stage job highlight ── */
     .stage-job.current-job {
-      border-color: var(--vscode-focusBorder) !important;
+      border-color: var(--vscode-charts-blue) !important;
       background: var(--vscode-editor-selectionBackground) !important;
+      color: var(--vscode-editor-selectionForeground, var(--vscode-editor-foreground)) !important;
     }
   </style>
 </head>
@@ -645,7 +650,7 @@ ${stages ? `
   function renderDiagram() {
     const container = document.getElementById('diagram');
     try {
-      const { svg } = pele.render(SOURCE, { links: false, images: false });
+      const { svg } = pele.render(SOURCE, { links: false, images: false, config: { flowchart: { curve: 'step' } } });
       const parser = new DOMParser();
       const doc = parser.parseFromString(svg, 'text/html');
       const svgNode = doc.querySelector('svg');

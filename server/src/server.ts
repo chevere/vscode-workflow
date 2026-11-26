@@ -146,10 +146,10 @@ connection.onRequest('chevereWorkflow/jobPositions', (params: { uri: string }) =
   const document = documents.get(params.uri);
   if (!document) return [];
   const parsed = parseDocument(document.getText());
-  const result: { name: string; start: number; end: number }[] = [];
+  const result: { name: string; start: number; end: number; argumentsStart: number }[] = [];
   for (const wc of parsed.workflowCalls) {
     for (const { name, call } of wc.jobs) {
-      result.push({ name, start: call.callStart, end: call.callEnd });
+      result.push({ name, start: call.callStart, end: call.callEnd, argumentsStart: call.argumentsStart });
     }
   }
   return result;

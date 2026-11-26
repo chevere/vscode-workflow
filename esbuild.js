@@ -33,6 +33,12 @@ function copyVendorAssets() {
   const codiconSrc = path.join(__dirname, 'node_modules', '@vscode', 'codicons', 'dist');
   fs.copyFileSync(path.join(codiconSrc, 'codicon.css'), path.join(codiconsDir, 'codicon.css'));
   fs.copyFileSync(path.join(codiconSrc, 'codicon.ttf'), path.join(codiconsDir, 'codicon.ttf'));
+
+  const graphIcon = fs.readFileSync(path.join(__dirname, 'node_modules', '@vscode', 'codicons', 'src', 'icons', 'type-hierarchy.svg'), 'utf8');
+  if (!graphIcon.includes('fill="currentColor"')) throw new Error('Unexpected type-hierarchy Codicon format');
+  const attribution = '<!-- VS Code Codicons by Microsoft: https://github.com/microsoft/vscode-codicons, CC BY 4.0: https://creativecommons.org/licenses/by/4.0/; fill color modified. -->\n';
+  fs.writeFileSync(path.join(codiconsDir, 'type-hierarchy-light.svg'), attribution + graphIcon.replace('fill="currentColor"', 'fill="#424242"'));
+  fs.writeFileSync(path.join(codiconsDir, 'type-hierarchy-dark.svg'), attribution + graphIcon.replace('fill="currentColor"', 'fill="#c5c5c5"'));
 }
 
 async function main() {
